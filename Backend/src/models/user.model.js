@@ -1,7 +1,8 @@
 import mongoose, { Schema } from 'mongoose';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
-
-const recyclerSchema = new Schema(
+const userSchema = new Schema(
     {
         username: {
             type: String,
@@ -15,7 +16,7 @@ const recyclerSchema = new Schema(
             type: String,
             required: true,
             trim: true,
-            index: true,
+            index: true
         },
         avatar: {
             type: String, // clodinary url
@@ -32,7 +33,7 @@ const recyclerSchema = new Schema(
             type: String,
             required: [true, 'Password is required']
         },
-        phone: {
+        mobile: {
             type: Number,
             limit: 10,
             required: true,
@@ -58,26 +59,6 @@ const recyclerSchema = new Schema(
             type: Number,
             required: true,
         },
-        shopName: {
-            type: String,
-            required: true,
-        },
-        shopImage: {
-            type: String, // cloudinary url
-            required: true,
-        },
-        identity: {
-            type: String, // clodinary url
-            required: true,
-        },
-        verified: {
-            type: Boolean,
-            default: false,
-        },
-        review: {
-            type: Number,
-            default: 0,
-        },
         posts: [
             {
                 type: Schema.Types.ObjectId,
@@ -94,18 +75,20 @@ const recyclerSchema = new Schema(
 )
 
 // this middleware will run before saving a user document
-recyclerSchema.pre("save", async function (next) {
+userSchema.pre("save", async function (next) {
+
     if(!this.isModified("passwrod")) return next();
+    
     // hash the password before saving
     this.password = await bcrypt.hash(this.password,10)
     next()
 })
 
-recyclerSchema.methods.isPasswordCorrect = async function(password){
+userSchema.methods.isPasswordCorrect = async function(password){
     return await bcrypt.compare(password, this.password)
 }
 
-recyclerSchema.methods.generateAccessToken = function(){
+userSchema.methods.generateAccessToken = function(){
     return jwt.sign(
         {
             _id: this._id,
@@ -120,7 +103,7 @@ recyclerSchema.methods.generateAccessToken = function(){
     )
 }
 
-recyclerSchema.methods.generateRefreshToken = function(){
+userSchema.methods.generateRefreshToken = function(){
     return jwt.sign(
         {
             _id: this._id
@@ -132,4 +115,4 @@ recyclerSchema.methods.generateRefreshToken = function(){
     )
 }
 
-export const Recycler = mongoose.model("Recycler", recyclerSchema)
+export const User = mongoose.model("User", userSchema)
