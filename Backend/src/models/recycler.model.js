@@ -34,7 +34,7 @@ const recyclerSchema = new Schema(
             type: String,
             required: [true, 'Password is required']
         },
-        phone: {
+        mobile: {
             type: Number,
             limit: 10,
             required: true,
@@ -76,7 +76,7 @@ const recyclerSchema = new Schema(
             type: Boolean,
             default: false,
         },
-        review: {
+        rating: {
             type: Number,
             default: 0,
         },
@@ -97,7 +97,7 @@ const recyclerSchema = new Schema(
 
 // this middleware will run before saving a user document
 recyclerSchema.pre("save", async function (next) {
-    if(!this.isModified("passwrod")) return next();
+    if(!this.isModified("password")) return next();
     // hash the password before saving
     this.password = await bcrypt.hash(this.password,10)
     next()
