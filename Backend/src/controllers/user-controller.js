@@ -90,12 +90,15 @@ const registerUser = asyncHandler(async (req, res) => {
 const loginUser = asyncHandler(async (req, res) => {
     const { email, username, password } = req.body;
 
-    if (!username && !email) {
-        throw new ApiError(400, "Username or email is required to login");
+    if ((!email && !username) || !password) {
+        throw new ApiError(400, "Email or Username ans password are required to login");
     }
 
     const user = await User.findOne({
-        $or: [{ email }, { username }]
+        $or: [
+            { email },
+            { username }
+        ]
     })
 
     if (!user) {
@@ -199,10 +202,14 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     }
 
     // verify the refresh token
-    const decodedToken = jwt.verify(
-        incomingRefreshToken,
-        process.env.REFRESH_TOKEN_SECRET
-    )
+    // verify the refresh token
+        let decodedToken;
+        try {
+            decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+            console.log("decodedToken: ", decodedToken);
+        } catch (error) {
+            throw new ApiError(401, "Invalid or expired refresh token: ");
+        }
 
     const user = await User.findById(decodedToken?._id)
 
@@ -222,17 +229,17 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
             secure: true, // set to true if using https
         }
 
-        const { newAccessToken, newRefreshToken } = await generateAccessToken(user._id);
+        const { AccessToken, RefreshToken } = await generateAccessAndRefreshTokens(user._id);
 
         return res
             .status(200)
-            .cookie("accessToken", newAccessToken, options)
-            .cookie("refreshToken", newRefreshToken, options)
+            .cookie("accessToken", AccessToken, options)
+            .cookie("refreshToken", RefreshToken, options)
             .json(
                 new ApiResponse(
                     200,
                     {
-                        accessToken: newAccessToken, refreshToken: newRefreshToken
+                        accessToken: AccessToken, refreshToken: RefreshToken
                     },
                     "Access token refreshed successfully"
                 )

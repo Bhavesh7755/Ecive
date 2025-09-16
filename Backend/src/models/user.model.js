@@ -77,7 +77,7 @@ const userSchema = new Schema(
 // this middleware will run before saving a user document
 userSchema.pre("save", async function (next) {
 
-    if(!this.isModified("passwrod")) return next();
+    if(!this.isModified("password")) return next();
     
     // hash the password before saving
     this.password = await bcrypt.hash(this.password,10)

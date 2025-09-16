@@ -109,7 +109,7 @@ const loginRecycler = asyncHandler(async (req, res) => {
 
     const isPasswordValid = await recycler.isPasswordCorrect(password);
 
-    if (!isPasswordValid ) {
+    if (!isPasswordValid) {
         throw new ApiError(401, "Invalid password");
     }
 
@@ -163,8 +163,64 @@ const logoutRecycler = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, {}, "Recycler logged out successfully"));
 })
 
+// Method for generaing access token from refresh token after expiry of access token each time
+const refreshAccessToken = asyncHandler(async (req, res) => {
+    const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken; // get the refresh token from the cookie or request body from user side
+
+    if (!incomingRefreshToken) {
+        throw new ApiError(401, "No refresh token provided, please login first or Unauthorized request");
+    }
+
+    // verify the refresh token
+    let decodedToken;
+    try {
+        decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+        console.log("decodedToken: ", decodedToken);
+    } catch (error) {
+        throw new ApiError(401, "Invalid or expired refresh token: ");
+    }
+
+    const recycler = await Recycler.findById(decodedToken?._id)
+
+    if (!recycler) {
+        throw new ApiError(401, "Invalid refresh token or user does not exist");
+    }
+
+
+    if (incomingRefreshToken !== recycler.refreshToken) {
+        throw new ApiError(401, "Refresh token is expired or used");
+    }
+
+
+    try {
+        const options = {
+            httpOnly: true,
+            secure: true, // set to true if using https
+        }
+
+        const { AccessToken, RefreshToken } = await generateAccessAndRefreshToken(recycler._id);
+
+        return res
+            .status(200)
+            .cookie("accessToken", AccessToken, options)
+            .cookie("refreshToken", RefreshToken, options)
+            .json(
+                new ApiResponse(
+                    200,
+                    {
+                        accessToken: AccessToken, refreshToken: RefreshToken
+                    },
+                    "Access token refreshed successfully"
+                )
+            )
+    } catch (error) {
+        throw new ApiError(401, error?.message || "Invalid refresh token");
+    }
+})
+
 export {
     registerRecycler,
     loginRecycler,
     logoutRecycler,
+    refreshAccessToken,
 };
