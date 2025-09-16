@@ -1,10 +1,14 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { motion, useScroll, useTransform, useReducedMotion } from "framer-motion";
-import Button from "@/components/ui/Button";
+import { Button }from "@/components/ui/Button";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Leaf, Recycle, Truck, Shield, BarChart, Store, Sparkles, Zap, Mail, Phone, MapPin, Send } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function LandingPage() {
+
+  const Navigate = useNavigate();
+
   const [isLoading, setIsLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -221,7 +225,8 @@ export default function LandingPage() {
             } : {}}
             whileTap={{ scale: 0.95 }}
           >
-            <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-2xl px-8 py-2 font-semibold transition-all duration-300">
+            <Button onClick={() => Navigate("/auth")}
+            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-2xl px-8 py-2 font-semibold transition-all duration-300">
               Login/Register
             </Button>
           </motion.div>
