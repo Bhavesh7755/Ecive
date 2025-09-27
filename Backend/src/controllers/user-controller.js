@@ -4,7 +4,6 @@ import { User } from "../models/user.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
-import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 // generating the access token and refresh token method for login
 const generateAccessAndRefreshTokens = async (userId) => {
@@ -78,7 +77,7 @@ const registerUser = asyncHandler(async (req, res) => {
     // Cookie options
     const cookieOptions = {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // true in production, false in local
+        secure: process.env.NODE_ENV === "development", // true in production, false in local
         sameSite: "strict"
     };
 
@@ -133,7 +132,7 @@ const loginUser = asyncHandler(async (req, res) => {
     // ✅ Cookie options
     const options = {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // only secure in prod
+        secure: process.env.NODE_ENV === "development", // only secure in prod
         sameSite: "strict"
     };
 
@@ -289,8 +288,9 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
 const getCurrentUser = asyncHandler(async (req, res) => {
     return res
-        .status(200)
-        .json(200, req.user, "Current user fetched successfully"); // req.user is coming from the verifyJWT middleware so that we have to use that middleware in the route and we can access the req.user
+    .status(200)
+    .json(new ApiResponse(200, req.user, "Current user fetched successfully"));
+ // req.user is coming from the verifyJWT middleware so that we have to use that middleware in the route and we can access the req.user
 })
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
@@ -304,7 +304,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 
     // 3. check if user is exist and update details
     const user = await User.findByIdAndUpdate(
-        req, user?._id,
+        req.user?._id,
         {
             $set: {
                 fullName: fullName,

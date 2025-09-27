@@ -101,7 +101,7 @@ const registerRecycler = asyncHandler(async (req, res) => {
     // ✅ Cookie options
     const options = {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // only secure in prod
+        secure: process.env.NODE_ENV === "development", // only secure in prod
         sameSite: "strict"
     };
 
@@ -160,7 +160,7 @@ const loginRecycler = asyncHandler(async (req, res) => {
     // ✅ Cookie options
     const options = {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // only true in prod
+        secure: process.env.NODE_ENV === "development", // only true in prod
         sameSite: "strict"
     };
 

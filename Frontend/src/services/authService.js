@@ -7,15 +7,31 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// **USER API - Fixed to match your backend exactly**
+// Utility to extract error messages
+const extractErrorMessage = (error) => {
+  if (!error) return 'An unknown error occurred.';
+  if (error.response) {
+    if (typeof error.response.data === 'string') return error.response.data;
+    if (error.response.data) {
+      if (error.response.data.message) return error.response.data.message;
+      if (error.response.data.error) return error.response.data.error;
+      if (error.response.data.errors) {
+        return Object.values(error.response.data.errors).join(', ');
+      }
+    }
+    return `Request failed with status ${error.response.status}`;
+  }
+  if (error.message) return error.message;
+  return 'An error occurred, please try again.';
+};
+
 export const userAPI = {
   register: async (formData, avatarFile) => {
     try {
       const data = new FormData();
-      
-      // Match your backend field names exactly
+
       data.append('fullName', formData.fullName || '');
-      data.append('username', (formData.email || '').split('@')[0].toLowerCase()); // Generate username
+      data.append('username', (formData.email || '').split('@')[0]);
       data.append('email', formData.email || '');
       data.append('password', formData.password || '');
       data.append('mobile', formData.mobile || '');
@@ -24,48 +40,108 @@ export const userAPI = {
       data.append('pincode', formData.pincode || '');
       data.append('AddressLine1', formData.AddressLine1 || '');
       data.append('AddressLine2', formData.AddressLine2 || '');
-      
-      // Avatar is required
+
       if (avatarFile) {
         data.append('avatar', avatarFile);
       }
-      
+
       const response = await api.post('/users/register', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: 'User registration failed' };
+      throw new Error(extractErrorMessage(error));
     }
   },
 
   login: async (email, password) => {
     try {
       const response = await api.post('/users/login', { email, password });
-      
       if (response.data.data) {
         const { accessToken, refreshToken, user } = response.data.data;
         localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('refreshToken', refreshToken);
         localStorage.setItem('user', JSON.stringify(user));
       }
-      
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: 'Login failed' };
+      throw new Error(extractErrorMessage(error));
     }
-  }
+  },
+
+  logout: async () => {
+    try {
+      await api.post('/users/logout');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  getCurrentUser: async () => {
+    try {
+      const response = await api.get('/users/current-user');
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  refreshToken: async () => {
+    try {
+      const response = await api.post('/users/refresh-token');
+      if (response.data.data) {
+        const { accessToken, refreshToken } = response.data.data;
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('refreshToken', refreshToken);
+      }
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  changePassword: async (oldPassword, newPassword) => {
+    try {
+      const response = await api.post('/users/change-password', { oldPassword, newPassword });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  updateAccount: async (accountData) => {
+    try {
+      const response = await api.patch('/users/update-account', accountData);
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  updateAvatar: async (avatarFile) => {
+    try {
+      const formData = new FormData();
+      formData.append('avatar', avatarFile);
+      const response = await api.patch('/users/update-avatar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
 };
 
-// **RECYCLER API - Fixed to match your backend exactly**
+
 export const recyclerAPI = {
   register: async (formData, files) => {
     try {
       const data = new FormData();
-      
-      // Match your backend field names exactly
-      data.append('username', (formData.email || '').split('@')[0].toLowerCase());
+
+      data.append('username', formData.username || (formData.email || '').split('@')[0].toLowerCase());
       data.append('fullName', formData.fullName || '');
       data.append('email', formData.email || '');
       data.append('mobile', formData.mobile || '');
@@ -76,42 +152,182 @@ export const recyclerAPI = {
       data.append('state', formData.state || '');
       data.append('pincode', formData.pincode || '');
       data.append('shopName', formData.shopName || '');
-      
-      // Required files for recycler
-      if (files.avatar) {
+
+      // Append files with field names as per backend expectations
+      if (files?.avatar) {
         data.append('avatar', files.avatar);
       }
-      if (files.shopImage) {
+      if (files?.shopImage) {
         data.append('shopImage', files.shopImage);
       }
-      if (files.identity) {
+      if (files?.identity) {
         data.append('identity', files.identity);
       }
-      
+
       const response = await api.post('/recyclers/register-recycler', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      
+
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: 'Recycler registration failed' };
+      console.error('Recycler registration error:', error);
+      throw new Error(extractErrorMessage(error));
     }
   },
 
   login: async (email, password) => {
     try {
-      const response = await api.post('/recyclers/login-recycler', { email, password });
-      
-      if (response.data.data) {
+      const response = await api.post('/recyclers/login', { email, password });
+
+      if (response.data?.data) {
         const { accessToken, refreshToken, recycler } = response.data.data;
         localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('refreshToken', refreshToken);
+        // Store role explicitly for front-end context
         localStorage.setItem('user', JSON.stringify({ ...recycler, role: 'recycler' }));
       }
-      
+
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: 'Recycler login failed' };
+      console.error('Recycler login error:', error);
+      throw new Error(extractErrorMessage(error));
     }
-  }
+  },
+
+  logout: async () => {
+    try {
+      await api.post('/recyclers/logout');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+    } catch (error) {
+      console.error('Recycler logout error:', error);
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  refreshToken: async () => {
+    try {
+      const response = await api.post('/recyclers/refresh-token');
+      if (response.data?.data) {
+        const { accessToken, refreshToken } = response.data.data;
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('refreshToken', refreshToken);
+      }
+      return response.data;
+    } catch (error) {
+      console.error('Recycler token refresh error:', error);
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+};
+
+
+
+export const postAPI = {
+  // Upload images, returns array of URLs
+  uploadImages: async (files) => {
+    try {
+      let formData = new FormData();
+      files.forEach(file => {
+        formData.append('files', file);
+      });
+      const response = await api.post('/posts/upload-images', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  // Create new post with products
+  createPost: async (postData) => {
+    try {
+      const response = await api.post('/posts/create', postData);
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  // Get posts by logged in user
+  getMyPosts: async () => {
+    try {
+      const response = await api.get('/posts/my-Posts');
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  // Get nearby recyclers by lat, lng and radiusKm
+  getNearbyRecyclers: async (lat, lng, radiusKm = 10) => {
+    try {
+      const response = await api.get(`/posts/nearby-Recyclers?lat=${lat}&lng=${lng}&radiusKm=${radiusKm}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  // Select recycler for a post
+  selectRecycler: async (postId, recyclerId) => {
+    try {
+      const response = await api.post(`/posts/${postId}/select-recycler`, { recyclerId });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  // Add chat message for negotiation
+  addMessage: async (postId, message, priceOffer = null) => {
+    try {
+      const response = await api.post(`/posts/${postId}/add-message`, { message, priceOffer });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  // Accept AI price
+  acceptAIPrice: async (postId) => {
+    try {
+      const response = await api.post(`/posts/${postId}/accept-ai-price`);
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  // Finalize negotiated price
+  finalizePrice: async (postId, price) => {
+    try {
+      const response = await api.post(`/posts/${postId}/finalize-price`, { finalPrice: price });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  // Get post details by ID
+  getPostDetails: async (postId) => {
+    try {
+      const response = await api.get(`/posts/${postId}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  // Update post status
+  updatePostStatus: async (postId, status) => {
+    try {
+      const response = await api.patch(`/posts/${postId}/status`, { status });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
 };
