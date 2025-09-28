@@ -1,13 +1,22 @@
 // src/components/dashboard/ConditionQuestionnaire.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 export default function ConditionQuestionnaire({ wasteType, category, brand, model, initialData, onUpdate }) {
   const [answers, setAnswers] = useState(initialData || {});
+  const firstRun = useRef(true);
 
   useEffect(() => {
-  if (onUpdate) onUpdate(answers);
-}, [answers, onUpdate]);
+    // Skip running on first render
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
 
+    if (onUpdate) {
+      onUpdate(answers);
+    }
+  }, [answers]); // only track answers
+  
 
   // Example questions for electronics
   const questions = [
@@ -27,12 +36,18 @@ export default function ConditionQuestionnaire({ wasteType, category, brand, mod
           <label className="block font-medium mb-1">{q.label}</label>
           <select
             value={answers[q.id] || ''}
-            onChange={(e) => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+            onChange={(e) =>
+              setAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))
+            }
             className="w-full p-2 border rounded"
           >
-            <option value="" disabled>Select</option>
-            {q.options.map(opt => (
-              <option key={opt} value={opt}>{opt}</option>
+            <option value="" disabled>
+              Select
+            </option>
+            {q.options.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
             ))}
           </select>
         </div>

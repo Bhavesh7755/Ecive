@@ -34,7 +34,7 @@ Return ONLY valid JSON in this format:
 `;
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
     const result = await model.generateContent(prompt);
     const response = await result.response;
     const text = response.text();
@@ -126,20 +126,15 @@ export const uploadImages = asyncHandler(async (req, res) => {
     throw new ApiError(400, "No files uploaded");
   }
 
-  const urls = [];
-
-  for (const f of req.files) {
-    const result = await uploadOnCloudinary(f.path);
-
-    if (!result || !result.url) {
-      throw new ApiError(500, "Image upload failed");
-    }
-
-    urls.push(result.url);
+  // Upload each file to Cloudinary
+  const uploadedUrls = [];
+  for (const file of req.files) {
+    const uploaded = await uploadOnCloudinary(file.path);
+    if (uploaded?.secure_url) uploadedUrls.push(uploaded.secure_url);
   }
 
   return res.status(200).json(
-    new ApiResponse(200, { urls }, "Images uploaded successfully")
+    new ApiResponse(200, { urls: uploadedUrls }, "Images uploaded successfully")
   );
 });
 
@@ -155,63 +150,84 @@ export const createPost = asyncHandler(async (req, res) => {
 
   const { products, userLocation } = req.body;
 
+  // Validation: products
   if (!products || !Array.isArray(products) || products.length === 0) {
     throw new ApiError(400, 'Products array is required');
   }
 
-  // Validate location
-  if (!userLocation?.lat || !userLocation?.lng) {
-    throw new ApiError(400, 'Valid userLocation with lat and lng is required');
+  // Validation: userLocation
+  if (
+    !userLocation ||
+    isNaN(userLocation.lat) ||
+    isNaN(userLocation.lng)
+  ) {
+    throw new ApiError(400, 'Valid userLocation with numeric lat and lng is required');
   }
 
   // Build post object
   const post = new Post({
     user: userId,
-    products,
+    products: products.map((p) => ({
+      ...p,
+      images: p.images || [], // ensure images array exists
+    })),
     userLocation: {
       type: 'Point',
-      coordinates: [Number(userLocation.lng), Number(userLocation.lat)]
+      coordinates: [Number(userLocation.lng), Number(userLocation.lat)],
     },
-    status: 'pending'
+    status: 'pending',
   });
 
-  // Save early so we have an id
+  // Save early so we have an ID
   await post.save();
 
-  // Attach this post to user's posts array
+  // Link post to user's posts array
   await User.findByIdAndUpdate(
-    userId, 
-    { $push: { posts: post._id } }, 
+    userId,
+    { $push: { posts: post._id } },
     { new: true }
   );
 
   const userCity = req.user?.city || 'your area';
 
-  // For each product call Gemini AI and attach results
-  for (let i = 0; i < post.products.length; i++) {
-    const p = post.products[i];
-    console.log(`Calling AI for product ${i}:`, p);
+  // Call AI for all products in parallel
+  const aiResults = await Promise.all(
+    post.products.map(async (p) => {
+      try {
+        const ai = await callGeminiAIForProduct(p, userCity);
+        return ai;
+      } catch (err) {
+        console.error('AI error for product:', p, err);
+        return {
+          aiSuggestedPrice: null,
+          aiConditionScore: null,
+          aiConfidence: null,
+          aiExplanation: 'AI failed to generate suggestions',
+        };
+      }
+    })
+  );
 
-    const ai = await callGeminiAIForProduct(p, userCity);
-    console.log(`AI for product ${i}:`, ai);
-
-    // attach to product
+  // Attach AI results to products
+  aiResults.forEach((ai, i) => {
     post.products[i].aiSuggestedPrice = ai.aiSuggestedPrice;
     post.products[i].aiConditionScore = ai.aiConditionScore;
     post.products[i].aiConfidence = ai.aiConfidence;
     post.products[i].aiExplanation = ai.aiExplanation;
-  }
+  });
 
+  // Update post status
   post.status = 'aiSuggested';
   await post.save();
 
-  // Notify user
+  // Notify in console (can be replaced with real notifications)
   console.log(`User ${req.user?.email} created a post in ${userCity}. Awaiting recycler selection.`);
 
   return res.status(201).json(
     new ApiResponse(201, post, 'Post created and AI analysis completed')
   );
 });
+
 
 /**
  * Get nearby recyclers (public) - YOUR ORIGINAL FUNCTION

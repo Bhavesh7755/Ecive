@@ -158,35 +158,22 @@ const loginUser = asyncHandler(async (req, res) => {
 // Logout User Controller
 // Logout User Controller
 const logoutUser = asyncHandler(async (req, res) => {
-    // Step 1: Remove the refresh token from the user's document in DB
-    // This ensures that the token can’t be used again to get new access tokens
-    await User.findByIdAndUpdate(
-        req.user._id, // user id from authenticated request
-        {
-            $set: {
-                refreshToken: undefined // remove/clear the stored refresh token
-            }
-        },
-        {
-            new: true  // ensures the updated user document is returned
-        }
-    );
+  // If authenticated, remove refresh token from DB
+  if (req.user?._id) {
+    await User.findByIdAndUpdate(req.user._id, { $set: { refreshToken: undefined } }, { new: true });
+  }
 
-    // Step 2: Define cookie options for security
-    const options = {
-        httpOnly: true, // prevents client-side JS from accessing cookies
-        secure: true,   // cookie only sent over HTTPS (set to false in local dev if not using https)
-    };
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "development",
+    sameSite: "strict"
+  };
 
-    // Step 3: Clear both access token and refresh token cookies
-    // This effectively logs the user out from the client side
-    return res
-        .status(200)
-        .clearCookie("accessToken", options)  // clear access token cookie
-        .clearCookie("refreshToken", options) // clear refresh token cookie
-        .json(
-            new ApiResponse(200, {}, "User logged out successfully") // send success response
-        );
+  return res
+    .status(200)
+    .clearCookie("accessToken", cookieOptions)
+    .clearCookie("refreshToken", cookieOptions)
+    .json(new ApiResponse(200, {}, "User logged out successfully"));
 });
 
 
@@ -287,42 +274,41 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
-    return res
-    .status(200)
-    .json(new ApiResponse(200, req.user, "Current user fetched successfully"));
- // req.user is coming from the verifyJWT middleware so that we have to use that middleware in the route and we can access the req.user
-})
+  // req.user is already populated by verifyJWT
+  const user = req.user;
+  if (!user) throw new ApiError(401, "Unauthorized");
+  return res.status(200).json(new ApiResponse(200, user, "Current user fetched successfully"));
+});
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
-    // 1. get user details from req.body
-    const { fullName, email, AddressLine1, AddressLine2, state, pincode, city } = req.body;
+  const { fullName, email, AddressLine1, AddressLine2, state, pincode, city } = req.body;
 
-    // 2. check if user details are not empty
-    if ([fullName, email, city, state, pincode, AddressLine1, AddressLine2].some((field) => field?.trim() === "")) {
-        throw new ApiError(400, "All fields are required");
-    }
+  // Basic validation (AddressLine2 can be optional)
+  if ([fullName, email, city, state, pincode, AddressLine1].some((field) => !field || field.toString().trim() === "")) {
+    throw new ApiError(400, "All required fields are required");
+  }
 
-    // 3. check if user is exist and update details
-    const user = await User.findByIdAndUpdate(
-        req.user?._id,
-        {
-            $set: {
-                fullName: fullName,
-                email: email,
-                AddressLine1: AddressLine1,
-                AddressLine2: AddressLine2,
-                state: state,
-                pincode: pincode,
-                city: city,
-            }
-        },
-        { new: true } // return the updated user documnet
-    ).select("-password")
+  // Update using req.user._id
+  const user = await User.findByIdAndUpdate(
+    req.user._id,
+    {
+      $set: {
+        fullName,
+        email,
+        AddressLine1,
+        AddressLine2,
+        state,
+        pincode,
+        city,
+      }
+    },
+    { new: true }
+  ).select("-password -refreshToken");
 
-    return res
-        .status(200)
-        .json(new ApiResponse(200, user, "Account details updated successfully"));
-})
+  if (!user) throw new ApiError(404, "User not found");
+
+  return res.status(200).json(new ApiResponse(200, user, "Account details updated successfully"));
+});
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
     // 1. get the file from client/fronted

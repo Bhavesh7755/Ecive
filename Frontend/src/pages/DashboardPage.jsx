@@ -14,30 +14,29 @@ export default function DashboardPage() {
   const [isSelling, setIsSelling] = useState(false);
 
   useEffect(() => {
-  async function fetchUser() {
-    try {
-      const resp = await userAPI.getCurrentUser();
-
-      console.log("Fetched user response:", resp);
-
-      // if API returns { success, data: {...user} }
-      setUser(resp.data || resp);
-
-    } catch (err) {
-      console.error('Failed to fetch user:', err);
-      // Optionally redirect to login if unauthorized
+    async function fetchUser() {
+      try {
+        const resp = await userAPI.getCurrentUser();
+        // server returns ApiResponse: { statusCode, data, message, success }
+        if (resp && resp.data) {
+          setUser(resp.data);
+        } else {
+          // fallback: maybe resp is already a user object
+          setUser(resp || null);
+        }
+      } catch (err) {
+        console.error('Failed to fetch user:', err);
+        // Optionally redirect to login if unauthorized
+      }
     }
-  }
-  fetchUser();
-}, []);
+    fetchUser();
+  }, []);
 
-  // Handle sidebar/menu tab change
   function handleTabChange(tab) {
     setActiveTab(tab);
-    setIsSelling(tab === 'sell'); // Only show SellProduct on 'sell'
+    setIsSelling(tab === 'sell');
   }
 
-  // Handle "Sell Product" button (in DashboardHome)
   function handleSellClick() {
     setActiveTab('sell');
     setIsSelling(true);
@@ -46,7 +45,6 @@ export default function DashboardPage() {
   function handleSellSuccess(data) {
     setIsSelling(false);
     setActiveTab('dashboard');
-    // Optionally refresh posts here
     alert('Your product has been submitted! Processing AI pricing.');
   }
 
@@ -63,20 +61,11 @@ export default function DashboardPage() {
         <DashboardHome user={user} onSellClick={handleSellClick} />
       )}
       {activeTab === 'sell' && isSelling && (
-        <SellProduct
-          onBack={handleSellBack}
-          onSubmitSuccess={handleSellSuccess}
-        />
+        <SellProduct onBack={handleSellBack} onSubmitSuccess={handleSellSuccess} />
       )}
-      {activeTab === 'orders' && (
-        <MyPosts user={user} />
-      )}
-      {activeTab === 'profile' && (
-        <UserProfile user={user} />
-      )}
-      {activeTab === 'settings' && (
-        <Settings />
-      )}
+      {activeTab === 'orders' && <MyPosts user={user} />}
+      {activeTab === 'profile' && <UserProfile user={user} />}
+      {activeTab === 'settings' && <Settings />}
     </DashboardLayout>
   );
 }

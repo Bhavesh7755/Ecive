@@ -1,34 +1,37 @@
+// utils/cloudinary.js
 import { v2 as cloudinary } from "cloudinary";
-import fs from 'fs';
+import fs from 'fs/promises';
 
 cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: process.env.CLOUDNARY_CLOUD_NAME,
+  api_key: process.env.CLOUDNARY_API_KEY,
+  api_secret: process.env.CLOUDNARY_API_SECRET,
 });
 
 const uploadOnCloudinary = async (localFilePath) => {
+  try {
+    if (!localFilePath) return null;
+
+    const response = await cloudinary.uploader.upload(localFilePath, {
+      resource_type: "auto",
+      folder: "ecive",
+    });
+
+    // Try to remove the temp file, ignore errors
     try {
-        if (!localFilePath) return null;// if no file path provided
-
-        //upload the file on cloudinary
-        const response = await cloudinary.uploader.upload(localFilePath, {
-            resource_type: "auto", // this will automatically detect the file type (image, video, etc.)
-            folder: "ecive", // optional folder name in cloudinary
-        })
-
-        // file has been uploaded successfull
-        // console.log("file uploaded on cloudinary: ",response.url);
-
-        // remove the file from local uploads folder
-        fs.unlinkSync(localFilePath);
-
-        return response;
+      await fs.unlink(localFilePath);
+    } catch (e) {
+      // log, but don't throw
+      console.warn('Warning: failed to remove temp file', localFilePath, e?.message);
     }
-    catch (error) {
-        fs.unlinkSync(localFilePath);// if some error occurs, remove the file from local uploads folder
-        return null;
-    }
-}
+
+    return response;
+  } catch (error) {
+    // try to unlink even on error
+    try { await fs.unlink(localFilePath); } catch (e) { /* ignore */ }
+    console.error('Cloudinary upload error:', error?.message || error);
+    return null;
+  }
+};
 
 export { uploadOnCloudinary };

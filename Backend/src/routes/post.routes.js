@@ -1,5 +1,7 @@
+// routes/post.routes.js
 import { Router } from 'express';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
+import { upload } from '../middlewares/multer.middleware.js'; // <--- import multer
 import {
   createPost,
   uploadImages,
@@ -15,8 +17,8 @@ import {
 
 const router = Router();
 
-// Upload images (for items)
-router.post('/upload-images', verifyJWT, uploadImages);
+// Upload images (for items) -> expect field name 'files' (frontend uses 'files')
+router.post('/upload-images', verifyJWT, upload.array('files', 10), uploadImages);
 
 // Create new post with product details
 router.post('/create', verifyJWT, createPost);
@@ -25,7 +27,7 @@ router.post('/create', verifyJWT, createPost);
 router.get('/my-posts', verifyJWT, getMyPosts);
 
 // Get nearby recyclers by location
-router.get('/nearby-recyclers',verifyJWT, getNearbyRecyclers); // public
+router.get('/nearby-recyclers', getNearbyRecyclers); // public
 
 // Select recycler for a post
 router.post('/:id/select-recycler', verifyJWT, selectRecycler);

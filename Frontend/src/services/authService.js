@@ -1,4 +1,6 @@
+// src/services/authService.js
 import axios from 'axios';
+import { tokenUtils } from '../utils/authUtils';
 
 const API_BASE_URL = 'http://localhost:8000/api/v1';
 
@@ -6,6 +8,16 @@ const api = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
 });
+
+// attach access token automatically
+api.interceptors.request.use((config) => {
+  const token = tokenUtils.getAccessToken();
+  if (token) {
+    config.headers = config.headers || {};
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+}, (error) => Promise.reject(error));
 
 // Utility to extract error messages
 const extractErrorMessage = (error) => {
@@ -18,6 +30,8 @@ const extractErrorMessage = (error) => {
       if (error.response.data.errors) {
         return Object.values(error.response.data.errors).join(', ');
       }
+      // handle ApiResponse wrapper: { message, data, success }
+      if (error.response.data.message) return error.response.data.message;
     }
     return `Request failed with status ${error.response.status}`;
   }
@@ -26,28 +40,13 @@ const extractErrorMessage = (error) => {
 };
 
 export const userAPI = {
-  register: async (formData, avatarFile) => {
+  register: async (formData) => {
     try {
-      const data = new FormData();
-
-      data.append('fullName', formData.fullName || '');
-      data.append('username', (formData.email || '').split('@')[0]);
-      data.append('email', formData.email || '');
-      data.append('password', formData.password || '');
-      data.append('mobile', formData.mobile || '');
-      data.append('city', formData.city || '');
-      data.append('state', formData.state || '');
-      data.append('pincode', formData.pincode || '');
-      data.append('AddressLine1', formData.AddressLine1 || '');
-      data.append('AddressLine2', formData.AddressLine2 || '');
-
-      if (avatarFile) {
-        data.append('avatar', avatarFile);
-      }
-
-      const response = await api.post('/users/register', data, {
+      // Expect formData to be FormData instance
+      const response = await api.post('/users/register', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+      // If server returns ApiResponse wrapper
       return response.data;
     } catch (error) {
       throw new Error(extractErrorMessage(error));
@@ -57,10 +56,9 @@ export const userAPI = {
   login: async (email, password) => {
     try {
       const response = await api.post('/users/login', { email, password });
-      if (response.data.data) {
+      if (response.data?.data) {
         const { accessToken, refreshToken, user } = response.data.data;
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
+        tokenUtils.setTokens(accessToken, refreshToken);
         localStorage.setItem('user', JSON.stringify(user));
       }
       return response.data;
@@ -72,9 +70,7 @@ export const userAPI = {
   logout: async () => {
     try {
       await api.post('/users/logout');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
+      tokenUtils.clearTokens();
     } catch (error) {
       throw new Error(extractErrorMessage(error));
     }
@@ -83,6 +79,7 @@ export const userAPI = {
   getCurrentUser: async () => {
     try {
       const response = await api.get('/users/current-user');
+      // return ApiResponse object from server
       return response.data;
     } catch (error) {
       throw new Error(extractErrorMessage(error));
@@ -92,10 +89,9 @@ export const userAPI = {
   refreshToken: async () => {
     try {
       const response = await api.post('/users/refresh-token');
-      if (response.data.data) {
+      if (response.data?.data) {
         const { accessToken, refreshToken } = response.data.data;
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
+        tokenUtils.setTokens(accessToken, refreshToken);
       }
       return response.data;
     } catch (error) {
@@ -135,42 +131,15 @@ export const userAPI = {
   },
 };
 
-
+// recyclerAPI and postAPI unchanged except ensure they use the same 'api' instance
 export const recyclerAPI = {
-  register: async (formData, files) => {
+  register: async (formData) => {
     try {
-      const data = new FormData();
-
-      data.append('username', formData.username || (formData.email || '').split('@')[0].toLowerCase());
-      data.append('fullName', formData.fullName || '');
-      data.append('email', formData.email || '');
-      data.append('mobile', formData.mobile || '');
-      data.append('password', formData.password || '');
-      data.append('AddressLine1', formData.AddressLine1 || '');
-      data.append('AddressLine2', formData.AddressLine2 || '');
-      data.append('city', formData.city || '');
-      data.append('state', formData.state || '');
-      data.append('pincode', formData.pincode || '');
-      data.append('shopName', formData.shopName || '');
-
-      // Append files with field names as per backend expectations
-      if (files?.avatar) {
-        data.append('avatar', files.avatar);
-      }
-      if (files?.shopImage) {
-        data.append('shopImage', files.shopImage);
-      }
-      if (files?.identity) {
-        data.append('identity', files.identity);
-      }
-
-      const response = await api.post('/recyclers/register-recycler', data, {
+      const response = await api.post('/recyclers/register-recycler', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-
       return response.data;
     } catch (error) {
-      console.error('Recycler registration error:', error);
       throw new Error(extractErrorMessage(error));
     }
   },
@@ -178,18 +147,13 @@ export const recyclerAPI = {
   login: async (email, password) => {
     try {
       const response = await api.post('/recyclers/login', { email, password });
-
       if (response.data?.data) {
         const { accessToken, refreshToken, recycler } = response.data.data;
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
-        // Store role explicitly for front-end context
+        tokenUtils.setTokens(accessToken, refreshToken);
         localStorage.setItem('user', JSON.stringify({ ...recycler, role: 'recycler' }));
       }
-
       return response.data;
     } catch (error) {
-      console.error('Recycler login error:', error);
       throw new Error(extractErrorMessage(error));
     }
   },
@@ -197,11 +161,8 @@ export const recyclerAPI = {
   logout: async () => {
     try {
       await api.post('/recyclers/logout');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user');
+      tokenUtils.clearTokens();
     } catch (error) {
-      console.error('Recycler logout error:', error);
       throw new Error(extractErrorMessage(error));
     }
   },
@@ -211,27 +172,20 @@ export const recyclerAPI = {
       const response = await api.post('/recyclers/refresh-token');
       if (response.data?.data) {
         const { accessToken, refreshToken } = response.data.data;
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
+        tokenUtils.setTokens(accessToken, refreshToken);
       }
       return response.data;
     } catch (error) {
-      console.error('Recycler token refresh error:', error);
       throw new Error(extractErrorMessage(error));
     }
   },
 };
 
-
-
 export const postAPI = {
-  // Upload images, returns array of URLs
   uploadImages: async (files) => {
     try {
-      let formData = new FormData();
-      files.forEach(file => {
-        formData.append('files', file);
-      });
+      const formData = new FormData();
+      files.forEach(file => formData.append('files', file));
       const response = await api.post('/posts/upload-images', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
@@ -241,7 +195,6 @@ export const postAPI = {
     }
   },
 
-  // Create new post with products
   createPost: async (postData) => {
     try {
       const response = await api.post('/posts/create', postData);
@@ -260,6 +213,7 @@ export const postAPI = {
       throw new Error(extractErrorMessage(error));
     }
   },
+
 
   // Get nearby recyclers by lat, lng and radiusKm
   getNearbyRecyclers: async (lat, lng, radiusKm = 10) => {
