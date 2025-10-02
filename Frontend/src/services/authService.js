@@ -40,13 +40,30 @@ const extractErrorMessage = (error) => {
 };
 
 export const userAPI = {
-  register: async (formData) => {
+   register: async (formData, avatarFile) => {
     try {
-      // Expect formData to be FormData instance
-      const response = await api.post('/users/register', formData, {
+      const data = new FormData();
+      
+      // Append form fields (your backend expects these exact field names)
+      data.append('fullName', formData.fullName || '');
+      data.append('username', (formData.email || '').split('@')[0].toLowerCase());
+      data.append('email', formData.email || '');
+      data.append('password', formData.password || '');
+      data.append('mobile', formData.mobile || '');
+      data.append('city', formData.city || '');
+      data.append('state', formData.state || '');
+      data.append('pincode', formData.pincode || '');
+      data.append('AddressLine1', formData.AddressLine1 || '');
+      data.append('AddressLine2', formData.AddressLine2 || '');
+      
+      if (avatarFile) {
+        data.append('avatar', avatarFile);
+      }
+
+      const response = await api.post('/users/register', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      // If server returns ApiResponse wrapper
+      
       return response.data;
     } catch (error) {
       throw new Error(extractErrorMessage(error));
@@ -133,11 +150,31 @@ export const userAPI = {
 
 // recyclerAPI and postAPI unchanged except ensure they use the same 'api' instance
 export const recyclerAPI = {
-  register: async (formData) => {
+  register: async (formData, files) => {
     try {
-      const response = await api.post('/recyclers/register-recycler', formData, {
+      const data = new FormData();
+      
+      // Backend expects these exact field names
+      data.append('username', (formData.email || '').split('@')[0].toLowerCase());
+      data.append('fullName', formData.fullName || '');
+      data.append('email', formData.email || '');
+      data.append('mobile', formData.mobile || '');
+      data.append('password', formData.password || '');
+      data.append('AddressLine1', formData.AddressLine1 || '');
+      data.append('AddressLine2', formData.AddressLine2 || '');
+      data.append('city', formData.city || '');
+      data.append('state', formData.state || '');
+      data.append('pincode', formData.pincode || '');
+      data.append('shopName', formData.shopName || '');
+
+      if (files.avatar) data.append('avatar', files.avatar);
+      if (files.shopImage) data.append('shopImage', files.shopImage);
+      if (files.identity) data.append('identity', files.identity);
+
+      const response = await api.post('/recyclers/register-recycler', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+      
       return response.data;
     } catch (error) {
       throw new Error(extractErrorMessage(error));

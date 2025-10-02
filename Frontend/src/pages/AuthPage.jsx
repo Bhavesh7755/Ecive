@@ -19,7 +19,7 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedRole, setSelectedRole] = useState('');
-  
+
   // Form data matching backend exactly
   const [formData, setFormData] = useState({
     // Common fields
@@ -31,21 +31,21 @@ export default function AuthPage() {
     pincode: "",
     AddressLine1: "",
     AddressLine2: "",
-    
+
     // User fields
     fullName: "",
-    
+
     // Recycler fields  
     shopName: "",
   });
-  
+
   // File states
   const [files, setFiles] = useState({
     avatar: null,
     shopImage: null,
     identity: null
   });
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -118,6 +118,7 @@ export default function AuthPage() {
         }
       } else {
         // Registration
+        // Registration
         if (!files.avatar) {
           throw { message: 'Profile picture is required' };
         }
@@ -126,14 +127,19 @@ export default function AuthPage() {
           if (!files.shopImage || !files.identity) {
             throw { message: 'Shop image and identity document are required' };
           }
+
+          // Pass formData and files separately
           result = await recyclerAPI.register(formData, files);
-          setSuccess('Recycler registration successful!');
-          setTimeout(() => navigate('/recycler-dashboard'), 1500);
+          setSuccess("Recycler registration successful!");
+          setTimeout(() => navigate("/recycler-dashboard"), 1500);
+
         } else {
+          // User Registration - pass formData and avatar file
           result = await userAPI.register(formData, files.avatar);
-          setSuccess('Registration successful!');
-          setTimeout(() => navigate('/dashboard'), 1500);
+          setSuccess("Registration successful!");
+          setTimeout(() => navigate("/dashboard"), 1500);
         }
+
       }
     } catch (error) {
       setError(error.message || 'An error occurred. Please try again.');
@@ -147,17 +153,17 @@ export default function AuthPage() {
 
   // Validation for each step
   const isStepValid = (step) => {
-    switch(step) {
+    switch (step) {
       case 1: return selectedRole !== '';
       case 2: return formData.email && formData.password;
-      case 3: 
+      case 3:
         if (selectedRole === 'user') {
           return formData.fullName && formData.mobile && files.avatar;
         } else if (selectedRole === 'recycler') {
           return formData.fullName && formData.mobile && formData.shopName && files.avatar;
         }
         return false;
-      case 4: 
+      case 4:
         return formData.AddressLine1 && formData.city && formData.state && formData.pincode;
       default: return false;
     }
@@ -174,15 +180,15 @@ export default function AuthPage() {
         {/* Error and Success Messages */}
         <AnimatePresence>
           {error && (
-            <AlertMessage 
-              type="error" 
-              message={error} 
-              onClose={() => setError('')} 
+            <AlertMessage
+              type="error"
+              message={error}
+              onClose={() => setError('')}
             />
           )}
           {success && (
-            <AlertMessage 
-              type="success" 
+            <AlertMessage
+              type="success"
               message={success}
             />
           )}
@@ -198,11 +204,10 @@ export default function AuthPage() {
               setError('');
               setSuccess('');
             }}
-            className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all duration-300 ${
-              isLogin 
-                ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg' 
+            className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all duration-300 ${isLogin
+                ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg'
                 : 'text-gray-600 hover:text-green-600'
-            }`}
+              }`}
           >
             Login
           </button>
@@ -214,11 +219,10 @@ export default function AuthPage() {
               setError('');
               setSuccess('');
             }}
-            className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all duration-300 ${
-              !isLogin 
-                ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg' 
+            className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all duration-300 ${!isLogin
+                ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg'
                 : 'text-gray-600 hover:text-green-600'
-            }`}
+              }`}
           >
             Register
           </button>
@@ -238,13 +242,13 @@ export default function AuthPage() {
               <h3 className="text-3xl font-bold text-gray-800 text-center mb-6">
                 Welcome Back! 🌱
               </h3>
-              
-              <RoleSelection 
-                selectedRole={selectedRole} 
+
+              <RoleSelection
+                selectedRole={selectedRole}
                 onRoleSelect={handleRoleSelect}
                 error={!selectedRole && error ? 'Please select your role' : ''}
               />
-              
+
               <CredentialsForm
                 email={formData.email}
                 password={formData.password}
@@ -257,9 +261,8 @@ export default function AuthPage() {
               <button
                 type="submit"
                 disabled={isLoading || !selectedRole || !formData.email || !formData.password}
-                className={`w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-4 rounded-2xl transition-all duration-300 ${
-                  (!selectedRole || !formData.email || !formData.password || isLoading) ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
+                className={`w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold py-4 rounded-2xl transition-all duration-300 ${(!selectedRole || !formData.email || !formData.password || isLoading) ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
               >
                 {isLoading ? 'Signing In...' : `Sign In as ${selectedRole || 'User'}`}
               </button>
@@ -282,11 +285,10 @@ export default function AuthPage() {
                   {[1, 2, 3, 4].map((step) => (
                     <div
                       key={step}
-                      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm border-2 ${
-                        currentStep >= step 
-                          ? 'bg-green-500 text-white border-green-500' 
+                      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm border-2 ${currentStep >= step
+                          ? 'bg-green-500 text-white border-green-500'
                           : 'bg-white text-gray-400 border-gray-300'
-                      }`}
+                        }`}
                     >
                       {step}
                     </div>
@@ -309,8 +311,8 @@ export default function AuthPage() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -100 }}
                   >
-                    <RoleSelection 
-                      selectedRole={selectedRole} 
+                    <RoleSelection
+                      selectedRole={selectedRole}
                       onRoleSelect={handleRoleSelect}
                     />
                   </motion.div>
@@ -393,7 +395,7 @@ export default function AuthPage() {
                     {selectedRole === 'recycler' && (
                       <div className="space-y-4">
                         <h4 className="font-semibold text-gray-800">Upload Required Documents</h4>
-                        
+
                         <FileUpload
                           label="Shop Image"
                           description="Upload your shop/facility image"
@@ -430,14 +432,13 @@ export default function AuthPage() {
                     Back
                   </button>
                 )}
-                
+
                 <button
                   type="button"
                   onClick={currentStep === 4 ? handleSubmit : nextStep}
                   disabled={!isStepValid(currentStep) || isLoading}
-                  className={`ml-auto flex items-center px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold rounded-2xl transition-all duration-300 ${
-                    !isStepValid(currentStep) || isLoading ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
+                  className={`ml-auto flex items-center px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-bold rounded-2xl transition-all duration-300 ${!isStepValid(currentStep) || isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
                 >
                   {isLoading ? (
                     'Creating Account...'
