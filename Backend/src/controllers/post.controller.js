@@ -126,15 +126,24 @@ export const uploadImages = asyncHandler(async (req, res) => {
     throw new ApiError(400, "No files uploaded");
   }
 
-  // Upload each file to Cloudinary
-  const uploadedUrls = [];
-  for (const file of req.files) {
-    const uploaded = await uploadOnCloudinary(file.path);
-    if (uploaded?.secure_url) uploadedUrls.push(uploaded.secure_url);
-  }
+  // Upload all files in parallel
+  const uploadedUrls = await Promise.all(
+    req.files.map(async (file) => {
+      try {
+        const uploaded = await uploadOnCloudinary(file.path);
+        return uploaded?.secure_url || null;
+      } catch (err) {
+        console.error("Cloudinary upload failed for", file.path, err);
+        return null;
+      }
+    })
+  );
+
+  // Filter out any nulls (failed uploads)
+  const validUrls = uploadedUrls.filter((url) => url !== null);
 
   return res.status(200).json(
-    new ApiResponse(200, { urls: uploadedUrls }, "Images uploaded successfully")
+    new ApiResponse(200, { urls: validUrls }, "Images uploaded successfully")
   );
 });
 
