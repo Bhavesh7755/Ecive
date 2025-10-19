@@ -52,8 +52,6 @@ const productSchema = new Schema({
   }
 );
 
-
-
 const postSchema = new Schema(
   {
     user: {
@@ -65,12 +63,19 @@ const postSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'Recycler'
     }, // selected recycler
+
     products: {
-      type: [
-        productSchema
-      ],
+      type: [productSchema],
       required: true
     },
+
+    // ✅ New address fields (instead of userLocation)
+    userAddress: {
+      type: String,
+      required: true,
+    },
+
+
     userAcceptedAIPrice: {
       type: Boolean,
       default: false
@@ -79,11 +84,7 @@ const postSchema = new Schema(
       {
         sender: {
           type: String,
-          enum: [
-            'user',
-            'recycler',
-            'system'
-          ],
+          enum: ['user', 'recycler', 'system'],
           required: true
         },
         message: {
@@ -125,19 +126,6 @@ const postSchema = new Schema(
     completedAt: {
       type: Date
     },
-    userLocation: {
-      type: {
-        type: String,
-        enum: [
-          'Point'
-        ],
-        default: 'Point'
-      },
-      coordinates: {
-        type: [Number],
-        default: [0, 0]
-      } // [lng, lat]
-    },
     comments: {
       type: String
     },
@@ -149,12 +137,6 @@ const postSchema = new Schema(
   },
   {
     timestamps: true
-  }
-);
-
-postSchema.index(
-  {
-    userLocation: '2dsphere'
   }
 );
 

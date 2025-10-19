@@ -235,12 +235,11 @@ export const postAPI = {
   createPost: async (postData) => {
     try {
       const response = await api.post('/posts/create', postData);
-      return response.data;
+      return response.data?.data || response.data;
     } catch (error) {
       throw new Error(extractErrorMessage(error));
     }
   },
-
   // Get posts by logged in user
   getMyPosts: async () => {
     try {

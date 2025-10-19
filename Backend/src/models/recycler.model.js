@@ -24,15 +24,15 @@ const recyclerSchema = new Schema({
     refreshToken: { type: String },
 
     // New: shopLocation for geo queries (location of recycler/shop)
-    shopLocation: {
-        type: { type: String, enum: ['Point'], default: 'Point' },
-        coordinates: { type: [Number], default: [0, 0] }, // [lng, lat]
-        address: { type: String } // human readable address of shop
-    }
+    // shopLocation: {
+    //     type: { type: String, enum: ['Point'], default: 'Point' },
+    //     coordinates: { type: [Number], default: [0, 0] }, // [lng, lat]
+    //     address: { type: String } // human readable address of shop
+    // }
 }, { timestamps: true });
 
 // create 2dsphere index to query recyclers by distance
-recyclerSchema.index({ shopLocation: '2dsphere' });
+// recyclerSchema.index({ shopLocation: '2dsphere' });
 
 // password hashing
 recyclerSchema.pre("save", async function (next) {
