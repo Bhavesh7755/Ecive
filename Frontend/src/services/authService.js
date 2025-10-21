@@ -40,10 +40,10 @@ const extractErrorMessage = (error) => {
 };
 
 export const userAPI = {
-   register: async (formData, avatarFile) => {
+  register: async (formData, avatarFile) => {
     try {
       const data = new FormData();
-      
+
       // Append form fields (your backend expects these exact field names)
       data.append('fullName', formData.fullName || '');
       data.append('username', (formData.email || '').split('@')[0].toLowerCase());
@@ -55,7 +55,7 @@ export const userAPI = {
       data.append('pincode', formData.pincode || '');
       data.append('AddressLine1', formData.AddressLine1 || '');
       data.append('AddressLine2', formData.AddressLine2 || '');
-      
+
       if (avatarFile) {
         data.append('avatar', avatarFile);
       }
@@ -63,7 +63,7 @@ export const userAPI = {
       const response = await api.post('/users/register', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      
+
       return response.data;
     } catch (error) {
       throw new Error(extractErrorMessage(error));
@@ -153,7 +153,7 @@ export const recyclerAPI = {
   register: async (formData, files) => {
     try {
       const data = new FormData();
-      
+
       // Backend expects these exact field names
       data.append('username', (formData.email || '').split('@')[0].toLowerCase());
       data.append('fullName', formData.fullName || '');
@@ -174,7 +174,7 @@ export const recyclerAPI = {
       const response = await api.post('/recyclers/register-recycler', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      
+
       return response.data;
     } catch (error) {
       throw new Error(extractErrorMessage(error));
@@ -252,14 +252,16 @@ export const postAPI = {
 
 
   // Get nearby recyclers by lat, lng and radiusKm
-  getNearbyRecyclers: async (lat, lng, radiusKm = 10) => {
+  // Get nearby recyclers by user's city
+  getNearbyRecyclers: async (city) => {
     try {
-      const response = await api.get(`/posts/nearby-Recyclers?lat=${lat}&lng=${lng}&radiusKm=${radiusKm}`);
+      const response = await api.get(`/posts/nearby-recyclers?city=${encodeURIComponent(city)}`);
       return response.data;
     } catch (error) {
       throw new Error(extractErrorMessage(error));
     }
   },
+
 
   // Select recycler for a post
   selectRecycler: async (postId, recyclerId) => {

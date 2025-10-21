@@ -685,14 +685,28 @@ export const createPost = asyncHandler(async (req, res) => {
 });
 
 /* ---------------------- GET RECYCLERS (BY CITY) ---------------------- */
+// export const getNearbyRecyclers = asyncHandler(async (req, res) => {
+//   const userCity = req.user?.city;
+//   if (!userCity) throw new ApiError(400, 'User city not found');
+
+//   const recyclers = await Recycler.find({ city: userCity }).select('-password -refreshToken');
+
+//   return res.status(200).json(new ApiResponse(200, recyclers, 'Recyclers from same city fetched'));
+// });
+
+
 export const getNearbyRecyclers = asyncHandler(async (req, res) => {
-  const userCity = req.user?.city;
+  // get city from query instead of req.user
+  const userCity = req.query.city;
   if (!userCity) throw new ApiError(400, 'User city not found');
 
   const recyclers = await Recycler.find({ city: userCity }).select('-password -refreshToken');
 
-  return res.status(200).json(new ApiResponse(200, recyclers, 'Recyclers from same city fetched'));
+  return res.status(200).json(
+    new ApiResponse(200, recyclers, `Recyclers from city: ${userCity} fetched`)
+  );
 });
+
 
 /* ---------------------- SELECT RECYCLER ---------------------- */
 export const selectRecycler = asyncHandler(async (req, res) => {

@@ -26,10 +26,10 @@
 // };
 
 // export default function SellProduct({ onBack, onSubmitSuccess }) {
-//   // step wizard is for the *current product* being edited
+//   // step wizard is for the current product being edited
 //   const [step, setStep] = useState(1);
 
-//   // single product form; when saved it will be pushed into `products`
+//   // single product form; when saved it will be pushed into products
 //   const [form, setForm] = useState({
 //     wasteType: '',
 //     category: '',
@@ -49,9 +49,7 @@
 //   const [error, setError] = useState('');
 //   const [aiResults, setAiResults] = useState([]); // results after post creation
 
-
 //   const [createdPost, setCreatedPost] = useState(null);
-
 
 //   const handleChange = (field, value) => {
 //     setForm(prev => ({ ...prev, [field]: value }));
@@ -176,6 +174,8 @@
 //       newProducts.push({ ...prod, images: imgs });
 //     }
 //     return newProducts;
+
+
 //   };
 
 //   // Build address string from user profile object
@@ -193,6 +193,26 @@
 //     const parts = [addr1, addr2, city, state, pincode].map(s => (s || '').toString().trim()).filter(Boolean);
 //     if (!parts.length) return null;
 //     return parts.join(', ');
+
+
+//   };
+
+//   // Robust extractor for API response shape -> post object
+//   const extractPostFromResponse = (resp) => {
+//     // resp might be:
+//     // 1) post object directly
+//     // 2) ApiResponse { statusCode, message, data: post }
+//     // 3) axios response wrapper { data: ApiResponse }
+//     // 4) other nested shapes
+//     if (!resp) return null;
+//     // axios response shape where actual payload is in resp.data
+//     const a = resp;
+//     if (a.data && (a.data.user || a.data.products || a.data._id)) return a.data; // resp.data === post
+//     if (a.data && a.data.data && (a.data.data.products || a.data.data._id)) return a.data.data; // resp.data.data === post
+//     // sometimes server returns { products: [...], ... } directly
+//     if (a.products || a._id) return a;
+//     // fallback: return resp.data if exists
+//     return a.data || a;
 //   };
 
 //   // Submit all products (products[] plus possibly current unsaved product)
@@ -268,24 +288,27 @@
 //       // 4) Call backend createPost
 //       const response = await postAPI.createPost(payload);
 
-//       const post = response?.data || response;
-
-
-//       // Extract returned post (support common ApiResponse shapes)
-//       const returnedPost = response?.data || response || null;
-//       // If your ApiResponse wrapper uses { data: post } check that
-//       const postObj = returnedPost?.data || returnedPost;
+//       // Extract robustly
+//       const postObj = extractPostFromResponse(response);
+//       if (!postObj) {
+//         // If we couldn't extract, keep the response for debugging and show a helpful message
+//         console.error('Could not extract post object from createPost response:', response);
+//         setError('Post created but response shape unexpected. Check console.');
+//         setLoading(false);
+//         return;
+//       }
 
 //       // 5) AI results are attached server-side to products - show them
-//       const returnedProducts = postObj?.products || [];
+//       const returnedProducts = postObj.products || [];
 //       setAiResults(returnedProducts);
 
+//       // store created post so UI shows prices
 //       setCreatedPost(postObj);
-//       console.log(postObj.products.map(p => p.aiSuggestedPrice));
+
+//       // scroll to ai section after short delay
 //       setTimeout(() => {
 //         document.getElementById('ai-prices-section')?.scrollIntoView({ behavior: 'smooth' });
 //       }, 500);
-
 
 //       // Reset local product builder
 //       setProducts([]);
@@ -302,14 +325,22 @@
 //       setEditingIndex(-1);
 //       setStep(6);
 
-//       // notify parent if needed
-//       onSubmitSuccess && onSubmitSuccess(postObj);
+//       // IMPORTANT: delay calling parent's callback so user can see prices
+//       if (onSubmitSuccess) {
+//         // wait 5 seconds, then call parent. This prevents immediate navigation which hides the results.
+//         setTimeout(() => {
+//           try { onSubmitSuccess(postObj); } catch (e) { console.warn('onSubmitSuccess threw', e); }
+//         }, 5000);
+//       }
+
 //     } catch (err) {
 //       console.error(err);
 //       setError(handleAuthError(err));
 //     } finally {
 //       setLoading(false);
 //     }
+
+
 //   };
 
 //   return (
@@ -421,7 +452,6 @@
 //               </>
 //             ) : (
 //               <>
-
 //                 <h3 className="text-xl font-semibold mb-4">Step 3: Additional Details (Optional)</h3>
 //                 <textarea value={form.description} onChange={(e) => handleChange('description', e.target.value)}
 //                   placeholder="Describe your item for better pricing"
@@ -515,9 +545,6 @@
 //         )}
 //       </AnimatePresence>
 
-
-
-
 //       {/* Navigation */}
 //       <div className="flex justify-between mt-8 pt-4 border-t">
 //         <button type="button" onClick={prevStep} disabled={step === 1}
@@ -551,41 +578,14 @@
 //           {createdPost.products.map((p, idx) => (
 //             <div key={idx} className="p-4 mb-3 border rounded-lg bg-green-50">
 //               <p><strong>Product:</strong> {p.brand || p.wasteType} {p.model}</p>
-//               <p><strong>AI Suggested Price:</strong> ₹{p.aiSuggestedPrice || 'N/A'}</p>
+//               <p><strong>AI Suggested Price:</strong> ₹{(p.aiSuggestedPrice !== undefined && p.aiSuggestedPrice !== null) ? p.aiSuggestedPrice : 'N/A'}</p>
 //             </div>
 //           ))}
 //         </div>
 //       )}
 //     </div>
 //   );
-// }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// }/
 
 
 
@@ -602,6 +602,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 import ImageUpload from '../common/ImageUpload';
 import ConditionQuestionnaire from './ConditionQuestionnaire';
@@ -626,6 +627,8 @@ const brands = {
 };
 
 export default function SellProduct({ onBack, onSubmitSuccess }) {
+  const navigate = useNavigate();
+
   // step wizard is for the current product being edited
   const [step, setStep] = useState(1);
 
@@ -774,8 +777,6 @@ export default function SellProduct({ onBack, onSubmitSuccess }) {
       newProducts.push({ ...prod, images: imgs });
     }
     return newProducts;
-
-
   };
 
   // Build address string from user profile object
@@ -793,8 +794,6 @@ export default function SellProduct({ onBack, onSubmitSuccess }) {
     const parts = [addr1, addr2, city, state, pincode].map(s => (s || '').toString().trim()).filter(Boolean);
     if (!parts.length) return null;
     return parts.join(', ');
-
-
   };
 
   // Robust extractor for API response shape -> post object
@@ -925,13 +924,9 @@ export default function SellProduct({ onBack, onSubmitSuccess }) {
       setEditingIndex(-1);
       setStep(6);
 
-      // IMPORTANT: delay calling parent's callback so user can see prices
-      if (onSubmitSuccess) {
-        // wait 5 seconds, then call parent. This prevents immediate navigation which hides the results.
-        setTimeout(() => {
-          try { onSubmitSuccess(postObj); } catch (e) { console.warn('onSubmitSuccess threw', e); }
-        }, 5000);
-      }
+      // IMPORTANT: Do NOT call onSubmitSuccess here to avoid immediate parent navigation.
+      // If you still want to notify parent, call onSubmitSuccess from parent after user confirms/selects recycler.
+      // (This prevents automatic redirect to dashboard and allows user to see AI prices & choose recycler.)
 
     } catch (err) {
       console.error(err);
@@ -939,9 +934,38 @@ export default function SellProduct({ onBack, onSubmitSuccess }) {
     } finally {
       setLoading(false);
     }
-
-
   };
+
+  // For now: "Find recyclers" will attempt to call postAPI.getNearbyRecyclers() (if implemented),
+  // otherwise will just console.log a helpful message. You requested console.log for now.
+  const handleFindRecyclers = async () => {
+    try {
+      const user = JSON.parse(localStorage.getItem('user'));
+      const city = user?.city;
+      console.log("Current user city:", city);
+
+
+      if (!user || !user.city) {
+        alert("Please update your profile with your city before finding recyclers.");
+        return;
+      }
+      if (!city) {
+        console.error('User city not found');
+        return;
+      }
+
+      const res = await postAPI.getNearbyRecyclers(city);
+      console.log('Nearby recyclers in your city:', res?.data || res);
+
+      // Navigate to RecyclerList component and pass recycler data
+      navigate('/dashboard/recycler-list', { state: { recyclers: res?.data || [] } });
+
+    } catch (err) {
+      console.error('Error fetching nearby recyclers (client):', err);
+    }
+  };
+
+
 
   return (
     <div className="bg-white rounded-xl p-8 shadow-md max-w-3xl mx-auto">
@@ -1181,11 +1205,19 @@ export default function SellProduct({ onBack, onSubmitSuccess }) {
               <p><strong>AI Suggested Price:</strong> ₹{(p.aiSuggestedPrice !== undefined && p.aiSuggestedPrice !== null) ? p.aiSuggestedPrice : 'N/A'}</p>
             </div>
           ))}
+
+          {/* New: Find recyclers (console.log for now) and Cancel */}
+          <div className="mt-4 flex gap-3">
+            <button
+              onClick={handleFindRecyclers}
+              className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+              type="button"
+            >
+              Find Recyclers in My City
+            </button>
+          </div>
         </div>
       )}
-
     </div>
-
-
   );
 }
