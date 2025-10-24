@@ -17,7 +17,7 @@ export const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // max 10MB per file
   fileFilter: (req, file, cb) => {
-    const allowed = /jpeg|jpg|png/;
+    const allowed = /jpeg|jpg|png|jfif/;
     const ext = path.extname(file.originalname).toLowerCase();
     if (allowed.test(ext)) cb(null, true);
     else cb(new Error("Only images are allowed"));

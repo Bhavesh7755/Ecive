@@ -18,16 +18,16 @@ const userSchema = new Schema({
     posts: [{ type: Schema.Types.ObjectId, ref: "Post" }],
     refreshToken: { type: String },
 
-    // New: userLocation for geo queries (store [lng, lat])
-    userLocation: {
-        type: { type: String, enum: ['Point'], default: 'Point' },
-        coordinates: { type: [Number], default: [0, 0] }, // [lng, lat]
-        address: { type: String } // optional formatted address
-    }
+    // // New: userLocation for geo queries (store [lng, lat])
+    // userLocation: {
+    //     type: { type: String, enum: ['Point'], default: 'Point' },
+    //     coordinates: { type: [Number], default: [0, 0] }, // [lng, lat]
+    //     address: { type: String } // optional formatted address
+    // }
 }, { timestamps: true });
 
 // index for geospatial queries
-userSchema.index({ userLocation: '2dsphere' });
+// userSchema.index({ userLocation: '2dsphere' });
 
 // password hashing middleware
 userSchema.pre("save", async function (next) {
