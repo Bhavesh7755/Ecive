@@ -733,6 +733,24 @@ export const selectRecycler = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, post, 'Recycler selected and negotiation started'));
 });
 
+
+
+// Get recycler by ID
+export const getRecyclerById = asyncHandler(async (req, res) => {
+  const recyclerId = req.params.id;
+  const recycler = await Recycler.findById(recyclerId).select('-password -refreshToken');
+  if (!recycler) throw new ApiError(404, 'Recycler not found');
+
+  res.status(200).json({
+    statusCode: 200,
+    success: true,
+    data: recycler,
+    message: 'Recycler fetched successfully',
+  });
+});
+
+
+
 /* ---------------------- CHAT MESSAGE ---------------------- */
 export const addChatMessage = asyncHandler(async (req, res) => {
   const userId = req.user?._id;

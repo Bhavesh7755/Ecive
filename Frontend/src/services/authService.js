@@ -273,6 +273,17 @@ export const postAPI = {
     }
   },
 
+  // Get recycler details by ID
+  getRecyclerById: async (id) => {
+    try {
+      const response = await api.get(`/recyclers/${id}`);
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+
   // Add chat message for negotiation
   addMessage: async (postId, message, priceOffer = null) => {
     try {

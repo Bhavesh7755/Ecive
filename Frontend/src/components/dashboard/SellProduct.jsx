@@ -957,8 +957,17 @@ export default function SellProduct({ onBack, onSubmitSuccess }) {
       const res = await postAPI.getNearbyRecyclers(city);
       console.log('Nearby recyclers in your city:', res?.data || res);
 
-      // Navigate to RecyclerList component and pass recycler data
-      navigate('/dashboard/recycler-list', { state: { recyclers: res?.data || [] } });
+      if (!createdPost) {
+        console.error("No created post found while navigating to recycler list.");
+        alert("Please create a post before finding recyclers.");
+        return;
+      }
+
+      // Navigate to RecyclerList component and pass both recyclers + createdPost
+      navigate('/dashboard/recycler-list', {
+        state: { recyclers: res?.data || [], currentPost: createdPost }
+      });
+
 
     } catch (err) {
       console.error('Error fetching nearby recyclers (client):', err);

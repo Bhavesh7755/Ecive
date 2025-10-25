@@ -12,7 +12,8 @@ import {
   acceptAIPrice,
   finalizePrice,
   getPostById,
-  updatePostStatus
+  updatePostStatus,
+  getRecyclerById
 } from '../controllers/post.controller.js';
 
 const router = Router();
@@ -31,6 +32,10 @@ router.get('/nearby-recyclers', getNearbyRecyclers); // public
 
 // Select recycler for a post
 router.post('/:id/select-recycler', verifyJWT, selectRecycler);
+
+// Details page about recycler
+router.get('/recyclers/:id', getRecyclerById); // public route
+
 
 // Chat messages (send message / negotiation)
 router.post('/:id/add-message', verifyJWT, addChatMessage);
