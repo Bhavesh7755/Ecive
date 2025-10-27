@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 import { AnimatePresence } from "framer-motion";
 import LandingPage from "./pages/LandingPage";
 import AuthPage from "./pages/AuthPage";

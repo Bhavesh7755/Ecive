@@ -13,7 +13,8 @@ import {
   finalizePrice,
   getPostById,
   updatePostStatus,
-  getRecyclerById
+  getRecyclerById,
+  sendRequestToRecycler
 } from '../controllers/post.controller.js';
 
 const router = Router();
@@ -36,6 +37,8 @@ router.post('/:id/select-recycler', verifyJWT, selectRecycler);
 // Details page about recycler
 router.get('/recyclers/:id', getRecyclerById); // public route
 
+// POST /posts/:id/send-request
+router.post('/:id/send-request', verifyJWT, sendRequestToRecycler);
 
 // Chat messages (send message / negotiation)
 router.post('/:id/add-message', verifyJWT, addChatMessage);

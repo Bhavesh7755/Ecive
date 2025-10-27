@@ -52,6 +52,30 @@ const productSchema = new Schema({
   }
 );
 
+const requestSchema = new Schema(
+  {
+    recycler: { type: Schema.Types.ObjectId, ref: 'Recycler', required: true },
+    products: [
+      {
+        wasteType: String,
+        brand: String,
+        model: String,
+        aiSuggestedPrice: Number,
+        aiConditionScore: Number,
+        aiConfidence: Number,
+        quantity: Number,
+      },
+    ],
+    sentAt: { type: Date, default: Date.now },
+    status: {
+      type: String,
+      enum: ['pending', 'accepted', 'rejected', 'completed'],
+      default: 'pending',
+    },
+  },
+  { _id: false }
+);
+
 const postSchema = new Schema(
   {
     user: {
@@ -133,7 +157,20 @@ const postSchema = new Schema(
       {
         type: String
       }
-    ]
+    ],
+
+    // ✅ New request tracking fields
+    requests: { type: [requestSchema], default: [] },
+
+    // ✅ Newly added fields for recycler request tracking
+    requestSentAt: {
+      type: Date
+    },
+    requestStatus: {
+      type: String,
+      enum: ['pending', 'accepted', 'rejected', 'expired', null],
+      default: 'pending'
+    },
   },
   {
     timestamps: true

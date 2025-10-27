@@ -283,6 +283,19 @@ export const postAPI = {
     }
   },
 
+  // Send request to recycler for a post
+  sendRequestToRecycler: async (postId, recyclerId, products) => {
+    try {
+      const response = await api.post(`/posts/${postId}/send-request`, {
+        recyclerId,
+        products
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || error.message);
+    }
+  },
+
 
   // Add chat message for negotiation
   addMessage: async (postId, message, priceOffer = null) => {
