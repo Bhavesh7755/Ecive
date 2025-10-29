@@ -57,7 +57,7 @@ export default function DashboardLayout({ children, activeTab, onTabChange, user
                 />
                 <div>
                   <h3 className="font-semibold text-gray-800">{user?.fullName}</h3>
-                  <p className="text-sm text-gray-600">{user?.email}</p>
+                  {/* <p className="text-sm text-gray-600">{user?.email}</p> */}
                 </div>
               </div>
             </div>

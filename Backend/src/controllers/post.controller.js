@@ -337,7 +337,7 @@ export const getMyPosts = asyncHandler(async (req, res) => {
 /* ---------------------- ACCEPT AI PRICE ---------------------- */
 export const acceptAIPrice = asyncHandler(async (req, res) => {
   const userId = req.user?._id;
-  const postId = req.params.id;
+  const postId = req.params.id; 
 
   if (!userId) throw new ApiError(401, 'Unauthorized');
 
