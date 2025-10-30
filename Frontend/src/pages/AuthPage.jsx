@@ -139,7 +139,7 @@ export default function AuthPage() {
           setSuccess("Registration successful!");
           setTimeout(() => navigate("/dashboard"), 1500);
         }
-
+        
       }
     } catch (error) {
       setError(error.message || 'An error occurred. Please try again.');
