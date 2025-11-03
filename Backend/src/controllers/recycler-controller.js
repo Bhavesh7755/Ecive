@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { Recycler } from "../models/recycler.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import { Post } from "../models/post.model.js";
 import jwt from "jsonwebtoken";
 
 // Generate tokens for recycler
@@ -268,6 +269,213 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     }
 });
 
+
+
+/**
+ * ✅ 1. Get all requests sent to this recycler
+ */
+export const getRecyclerRequests = asyncHandler(async (req, res) => {
+    try {
+    const { recyclerId } = req.params;
+
+    const recycler = await Recycler.findById(recyclerId).populate("posts");
+    if (!recycler) return res.status(404).json({ message: "Recycler not found" });
+
+    res.json(recycler.posts); // Return posts that belong to this recycler
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+
+export const updateRequestStatus = asyncHandler(async (req, res) => {
+    const { requestId, action } = req.params;
+    const { finalPrice } = req.body || {};
+    const recyclerId = req.recycler._id;
+
+    if (!["accept", "reject"].includes(action)) {
+        throw new ApiError(400, "Invalid action. Must be accept or reject.");
+    }
+
+    const post = await Post.findOne({ "requests._id": requestId });
+    if (!post) throw new ApiError(404, "Request not found.");
+
+    const request = post.requests.id(requestId);
+    if (!request.recycler.equals(recyclerId)) throw new ApiError(403, "Not authorized.");
+
+    if (action === "accept") {
+        request.status = "accepted";
+        if (finalPrice) {
+            post.negotiatedPrice = finalPrice;
+            post.isPriceFinalized = true;
+        }
+        post.status = "negotiation";
+        post.recycler = recyclerId;
+    } else if (action === "reject") {
+        request.status = "rejected";
+    }
+
+    await post.save();
+    res.status(200).json(new ApiResponse(200, request, `Request ${action}ed successfully`));
+});
+
+// GET /recyclers/profile
+export const getRecyclerProfile = asyncHandler(async (req, res) => {
+    res.status(200).json(new ApiResponse(200, req.recycler));
+});
+
+export const updateRecyclerProfile = asyncHandler(async (req, res) => {
+    Object.assign(req.recycler, req.body);
+    await req.recycler.save();
+    res.status(200).json(new ApiResponse(200, req.recycler, "Profile updated successfully"));
+});
+
+// ---------------------
+// Notifications
+// ---------------------
+export const getRecyclerNotifications = asyncHandler(async (req, res) => {
+    const recyclerId = req.recycler._id;
+
+    const posts = await Post.find({ "requests.recycler": recyclerId, "requests.status": "pending" })
+        .select("requests user createdAt");
+
+    const notifications = [];
+    posts.forEach(post => {
+        post.requests.forEach(request => {
+            if (request.recycler.toString() === recyclerId.toString() && request.status === "pending") {
+                notifications.push({
+                    notificationId: request._id,
+                    postId: post._id,
+                    user: post.user,
+                    sentAt: request.sentAt,
+                    message: `New request for post ${post._id}`
+                });
+            }
+        });
+    });
+
+    res.status(200).json(new ApiResponse(200, notifications));
+});
+
+export const markRecyclerNotificationAsRead = asyncHandler(async (req, res) => {
+    const recyclerId = req.recycler._id;
+    const { notificationId } = req.params;
+
+    const post = await Post.findOne({ "requests._id": notificationId });
+    if (!post) throw new ApiError(404, "Notification not found");
+
+    const request = post.requests.id(notificationId);
+    if (!request || request.recycler.toString() !== recyclerId.toString()) throw new ApiError(404, "Notification not found");
+
+    request.status = "expired";
+    await post.save();
+
+    res.status(200).json(new ApiResponse(200, request, "Notification marked as read"));
+});
+
+// ---------------------
+// Earnings
+// ---------------------
+export const getRecyclerEarnings = asyncHandler(async (req, res) => {
+    const recyclerId = req.recycler._id;
+
+    const posts = await Post.find({ recycler: recyclerId, status: "completed" });
+
+    const totalEarnings = posts.reduce((sum, post) => {
+        if (post.isPriceFinalized && post.negotiatedPrice) return sum + post.negotiatedPrice;
+        return sum;
+    }, 0);
+
+    res.status(200).json(new ApiResponse(200, { totalEarnings }));
+});
+
+// ---------------------
+// Orders
+// ---------------------
+// 📌 GET Orders for Recycler with status filtering
+export const getRecyclerOrders = asyncHandler(async (req, res) => {
+    const recyclerId = req.recycler?._id;
+    const status = req.query.status || "all";
+
+    if (!recyclerId) {
+        throw new ApiError(401, "Unauthorized");
+    }
+
+    const filter = { recycler: recyclerId };
+
+    if (status !== "all") {
+        filter.status = status;
+    }
+
+    const orders = await Post.find(filter)
+        .populate("user", "fullName email mobile")
+        .sort({ createdAt: -1 });
+
+    const formattedOrders = orders.map(o => ({
+        id: o._id,
+        status: o.status,
+        userName: o.user?.fullName,
+        userMobile: o.user?.mobile,
+        productsCount: o.products?.length || 0,
+        finalPrice: o.negotiatedPrice || o.aiSuggestedPrice || 0,
+        collectedAt: o.collectedAt,
+        completedAt: o.completedAt,
+        createdAt: o.createdAt,
+    }));
+
+    return res.status(200).json(
+        new ApiResponse(200, formattedOrders, "Recycler orders fetched successfully")
+    );
+});
+
+
+// ✅ GET Dashboard Stats for Recycler
+export const getRecyclerDashboardStats = asyncHandler(async (req, res) => {
+    const recyclerId = req.recycler?._id;
+
+    if (!recyclerId) {
+        throw new ApiError(401, "Unauthorized access");
+    }
+
+    // ✅ Count Orders assigned to recycler
+    const totalOrders = await Post.countDocuments({ recycler: recyclerId });
+
+    // ✅ Count pending requests (status = pending)
+    const pendingRequests = await Post.countDocuments({
+        recycler: recyclerId,
+        status: "waitingRecycler"
+    });
+
+    // ✅ Count accepted requests (status = negotiation / finalized / collected / completed)
+    const acceptedRequests = await Post.countDocuments({
+        recycler: recyclerId,
+        status: { $in: ["negotiation", "finalized", "collected", "completed"] }
+    });
+
+    // ✅ Earnings from completed posts: 10% commission
+    const completedOrders = await Post.find({
+        recycler: recyclerId,
+        status: "completed"
+    });
+
+    let totalEarnings = 0;
+    completedOrders.forEach(post => {
+        const price = post.negotiatedPrice || post.aiSuggestedPrice || 0;
+        totalEarnings += price * 0.10;
+    });
+
+    const stats = {
+        totalOrders,
+        pendingRequests,
+        acceptedRequests,
+        totalEarnings: Math.round(totalEarnings)
+    };
+
+    return res.status(200).json(
+        new ApiResponse(200, { stats }, "Recycler Dashboard Stats fetched successfully")
+    );
+});
 
 export {
     registerRecycler,

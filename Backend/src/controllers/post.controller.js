@@ -266,6 +266,9 @@ export const sendRequestToRecycler = asyncHandler(async (req, res) => {
   // });
 
 
+  if (!Array.isArray(post.requests)) {
+  post.requests = [];
+}
   post.requests.push({
     recycler: recyclerId,
     products,

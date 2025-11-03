@@ -149,12 +149,192 @@ export const userAPI = {
 };
 
 // recyclerAPI and postAPI unchanged except ensure they use the same 'api' instance
+// export const recyclerAPI = {
+//   register: async (formData, files) => {
+//     try {
+//       const data = new FormData();
+
+//       // Backend expects these exact field names
+//       data.append('username', (formData.email || '').split('@')[0].toLowerCase());
+//       data.append('fullName', formData.fullName || '');
+//       data.append('email', formData.email || '');
+//       data.append('mobile', formData.mobile || '');
+//       data.append('password', formData.password || '');
+//       data.append('AddressLine1', formData.AddressLine1 || '');
+//       data.append('AddressLine2', formData.AddressLine2 || '');
+//       data.append('city', formData.city || '');
+//       data.append('state', formData.state || '');
+//       data.append('pincode', formData.pincode || '');
+//       data.append('shopName', formData.shopName || '');
+
+//       if (files.avatar) data.append('avatar', files.avatar);
+//       if (files.shopImage) data.append('shopImage', files.shopImage);
+//       if (files.identity) data.append('identity', files.identity);
+
+//       const response = await api.post('/recyclers/register-recycler', data, {
+//         headers: { 'Content-Type': 'multipart/form-data' },
+//       });
+
+//       return response.data;
+//     } catch (error) {
+//       throw new Error(extractErrorMessage(error));
+//     }
+//   },
+
+//   login: async (email, password) => {
+//     try {
+//       const response = await api.post('/recyclers/login', { email, password });
+//       if (response.data?.data) {
+//         const { accessToken, refreshToken, recycler } = response.data.data;
+//         tokenUtils.setTokens(accessToken, refreshToken);
+//         localStorage.setItem('user', JSON.stringify({ ...recycler, role: 'recycler' }));
+//       }
+//       return response.data;
+//     } catch (error) {
+//       throw new Error(extractErrorMessage(error));
+//     }
+//   },
+
+//   logout: async () => {
+//     try {
+//       await api.post('/recyclers/logout');
+//       tokenUtils.clearTokens();
+//     } catch (error) {
+//       throw new Error(extractErrorMessage(error));
+//     }
+//   },
+
+//   refreshToken: async () => {
+//     try {
+//       const response = await api.post('/recyclers/refresh-token');
+//       if (response.data?.data) {
+//         const { accessToken, refreshToken } = response.data.data;
+//         tokenUtils.setTokens(accessToken, refreshToken);
+//       }
+//       return response.data;
+//     } catch (error) {
+//       throw new Error(extractErrorMessage(error));
+//     }
+//   },
+
+//   getMyRequests: async () => {
+//     try {
+//       const response = await api.get('/recyclers/my-requests');
+//       return response.data?.data || [];
+//     } catch (error) {
+//       throw new Error(extractErrorMessage(error));
+//     }
+//   },
+
+//   updateRequestStatus: async (requestId, action, finalPrice = null) => {
+//     try {
+//       const payload = finalPrice ? { finalPrice } : {};
+//       const response = await api.patch(`/recyclers/requests/${requestId}/${action}`, payload);
+//       return response.data;
+//     } catch (error) {
+//       throw new Error(extractErrorMessage(error));
+//     }
+//   },
+
+//   getRecyclerProfile: async () => {
+//     try {
+//       const response = await api.get('/recyclers/profile');
+//       return response.data?.data || response.data;
+//     } catch (error) {
+//       throw new Error(extractErrorMessage(error));
+//     }
+//   },
+
+//   updateRecyclerProfile: async (recyclerData) => {
+//     try {
+//       const response = await api.put('/recyclers/profile', recyclerData);
+//       return response.data;
+//     } catch (error) {
+//       throw new Error(extractErrorMessage(error));
+//     }
+//   },
+
+//   getRecyclerRequests: async () => {
+//     try {
+//       const response = await api.get('/recyclers/requests');
+//       return response.data?.data || [];
+//     } catch (error) {
+//       throw new Error(extractErrorMessage(error));
+//     }
+//   },
+
+//   acceptRecyclerRequest: async (requestId) => {
+//     try {
+//       const response = await api.post(`/recyclers/requests/${requestId}/accept`);
+//       return response.data;
+//     } catch (error) {
+//       throw new Error(extractErrorMessage(error));
+//     }
+//   },
+
+//   rejectRecyclerRequest: async (requestId) => {
+//     try {
+//       const response = await api.post(`/recyclers/requests/${requestId}/reject`);
+//       return response.data;
+//     } catch (error) {
+//       throw new Error(extractErrorMessage(error));
+//     }
+//   },
+
+//   getRecyclerStats: async () => {
+//     try {
+//       const response = await api.get('/recyclers/stats');
+//       return response.data?.data || response.data;
+//     } catch (error) {
+//       throw new Error(extractErrorMessage(error));
+//     }
+//   },
+
+//   getRecyclerNotifications: async () => {
+//     try {
+//       const response = await api.get('/recyclers/notifications');
+//       return response.data?.data || [];
+//     } catch (error) {
+//       throw new Error(extractErrorMessage(error));
+//     }
+//   },
+
+//   markRecyclerNotificationAsRead: async (notificationId) => {
+//     try {
+//       const response = await api.put(`/recyclers/notifications/${notificationId}/read`);
+//       return response.data;
+//     } catch (error) {
+//       throw new Error(extractErrorMessage(error));
+//     }
+//   },
+
+//   getRecyclerEarnings: async () => {
+//     try {
+//       const response = await api.get('/recyclers/earnings');
+//       return response.data?.data || response.data;
+//     } catch (error) {
+//       throw new Error(extractErrorMessage(error));
+//     }
+//   },
+
+//   getRecyclerOrders: async (status = "all") => {
+//     try {
+//       const response = await api.get(`/recyclers/orders?status=${status}`);
+//       return response.data?.data || response.data;
+//     } catch (error) {
+//       throw new Error(extractErrorMessage(error));
+//     }
+//   },
+// };
+
+
+
+
 export const recyclerAPI = {
   register: async (formData, files) => {
     try {
       const data = new FormData();
 
-      // Backend expects these exact field names
       data.append('username', (formData.email || '').split('@')[0].toLowerCase());
       data.append('fullName', formData.fullName || '');
       data.append('email', formData.email || '');
@@ -183,7 +363,7 @@ export const recyclerAPI = {
 
   login: async (email, password) => {
     try {
-      const response = await api.post('/recyclers/login', { email, password });
+      const response = await api.post('/recyclers/recycler-login', { email, password });
       if (response.data?.data) {
         const { accessToken, refreshToken, recycler } = response.data.data;
         tokenUtils.setTokens(accessToken, refreshToken);
@@ -197,8 +377,9 @@ export const recyclerAPI = {
 
   logout: async () => {
     try {
-      await api.post('/recyclers/logout');
+      await api.post('/recyclers/recycler-logout');
       tokenUtils.clearTokens();
+      localStorage.removeItem('user');
     } catch (error) {
       throw new Error(extractErrorMessage(error));
     }
@@ -206,7 +387,7 @@ export const recyclerAPI = {
 
   refreshToken: async () => {
     try {
-      const response = await api.post('/recyclers/refresh-token');
+      const response = await api.post('/recyclers/refresh-token-recycler');
       if (response.data?.data) {
         const { accessToken, refreshToken } = response.data.data;
         tokenUtils.setTokens(accessToken, refreshToken);
@@ -216,7 +397,94 @@ export const recyclerAPI = {
       throw new Error(extractErrorMessage(error));
     }
   },
+
+  // ✅ Correct API for fetching assigned requests
+  getRecyclerRequests: async () => {
+    try {
+      getMyRequests: async (recyclerId) => {
+    const response = await axios.get(`/recycler/requests/${recyclerId}`);
+    return response.data;
+    } }catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  // ✅ Match backend → /recyclers/requests/:requestId/:action
+  updateRequestStatus: async (requestId, action, finalPrice = null) => {
+    try {
+      const payload = finalPrice ? { finalPrice } : {};
+      const response = await api.patch(`/recyclers/requests/${requestId}/${action}`, payload);
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  getRecyclerProfile: async () => {
+    try {
+      const response = await api.get('/recyclers/profile');
+      return response.data?.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  updateRecyclerProfile: async (recyclerData) => {
+    try {
+      const response = await api.put('/recyclers/profile', recyclerData);
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  getRecyclerNotifications: async () => {
+    try {
+      const response = await api.get('/recyclers/notifications');
+      return response.data?.data || [];
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  // ✅ Mark notification as read → updates request status to 'expired'
+  markRecyclerNotificationAsRead: async (notificationId) => {
+    try {
+      const response = await api.put(`/recyclers/notifications/${notificationId}/read`);
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  getRecyclerEarnings: async () => {
+    try {
+      const response = await api.get('/recyclers/earnings');
+      return response.data?.data || {};
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  getRecyclerOrders: async (status = "all") => {
+    try {
+      const response = await api.get(`/recyclers/orders?status=${status}`);
+      return response.data?.data || [];
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  getRecyclerDashboardStats: async () => {
+    return api.get("/recycler/dashboard-stats");
+  },
+
 };
+
+
+
+
+
 
 export const postAPI = {
   uploadImages: async (files) => {
@@ -261,6 +529,7 @@ export const postAPI = {
       throw new Error(extractErrorMessage(error));
     }
   },
+
 
 
   // Select recycler for a post
