@@ -73,7 +73,7 @@ const requestSchema = new Schema(
       default: 'pending',
     },
   },
-  { _id: false }
+  { _id: true }
 );
 
 const postSchema = new Schema(

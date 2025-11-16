@@ -85,7 +85,7 @@ router.route("/profile").get(verifyJWTRecycler, getRecyclerProfile);
 router.route("/profile").patch(verifyJWTRecycler, updateRecyclerProfile);
 
 // ✅ Get All Requests from Users
-router.route("/requests/:recyclerId").get(verifyJWTRecycler, getRecyclerRequests);
+router.route("/requests").get(verifyJWTRecycler, getRecyclerRequests);
 
 // ✅ Update particular request status (accept / reject)
 router.route("/requests/:requestId/:action").patch(verifyJWTRecycler, updateRequestStatus);

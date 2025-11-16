@@ -275,18 +275,40 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
  * ✅ 1. Get all requests sent to this recycler
  */
 export const getRecyclerRequests = asyncHandler(async (req, res) => {
-    try {
-    const { recyclerId } = req.params;
+    const recyclerId = req.recycler._id; // ✔ recycler taken from token
 
-    const recycler = await Recycler.findById(recyclerId).populate("posts");
-    if (!recycler) return res.status(404).json({ message: "Recycler not found" });
+    const posts = await Post.find({ 
+        "requests.recycler": recyclerId 
+    }).populate("user", "fullName mobile email avatar city") // user info
+    .lean();
 
-    res.json(recycler.posts); // Return posts that belong to this recycler
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({ message: "Server error" });
-  }
+    const pendingRequests = [];
+
+    posts.forEach(post => {
+        post.requests.forEach(req => {
+            if (req.recycler.toString() === recyclerId.toString() &&
+                req.status === "pending") {
+                
+                pendingRequests.push({
+                    requestId: req._id,
+                    postId: post._id,
+                    products: post.products,
+                    sentAt: req.sentAt,
+                    userAddress: post.userAddress,
+                    postStatus: post.status,
+                    // Extra metadata the recycler MUST SEE
+                    createdAt: post.createdAt,
+                    user: post.user,
+                });
+            }
+        });
+    });
+
+    return res.status(200).json(
+        new ApiResponse(200, pendingRequests, "Recycler requests fetched")
+    );
 });
+
 
 
 export const updateRequestStatus = asyncHandler(async (req, res) => {

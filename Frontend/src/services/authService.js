@@ -400,14 +400,10 @@ export const recyclerAPI = {
 
   // ✅ Correct API for fetching assigned requests
   getRecyclerRequests: async () => {
-    try {
-      getMyRequests: async (recyclerId) => {
-    const response = await axios.get(`/recycler/requests/${recyclerId}`);
-    return response.data;
-    } }catch (error) {
-      throw new Error(extractErrorMessage(error));
-    }
+    const response = await api.get(`/recyclers/requests`);
+    return response.data?.data || [];
   },
+
 
   // ✅ Match backend → /recyclers/requests/:requestId/:action
   updateRequestStatus: async (requestId, action, finalPrice = null) => {
