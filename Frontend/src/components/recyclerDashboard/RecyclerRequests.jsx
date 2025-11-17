@@ -1,263 +1,437 @@
-// src/components/recyclerDashboard/RecyclerRequests.jsx
 import React, { useEffect, useState } from "react";
-import { recyclerAPI, postAPI } from "../../services/authService";
-import { MapPin, Smartphone, Loader2, ImageIcon } from "lucide-react";
+import { recyclerAPI } from "../../services/authService";
+import {
+  MapPin,
+  ListOrdered,
+  Loader2,
+  ArrowRightCircle,
+  ArrowLeft,
+  ArrowRight,
+  X,
+  Image as ImageIcon,
+  Check,
+  Trash2
+} from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
-/**
- * Recycler Requests (attractive, defensive)
- *
- * NOTE: Backend should include request._id (unique id for each request).
- * If request._id is missing, this component will FALL BACK and update the post status
- * using postAPI.updatePostStatus(postId, status). This is a best-effort fallback.
- */
-
-const cardVariant = {
-  hidden: { opacity: 0, y: 20, scale: 0.985 },
-  visible: (i) => ({ opacity: 1, y: 0, scale: 1, transition: { delay: i * 0.05, type: "spring", stiffness: 120 } })
-};
-
-const safeDate = (d) => {
-  try {
-    return new Date(d).toLocaleString();
-  } catch {
-    return "Unknown";
-  }
-};
-
-const FallbackImage = () => (
-  // small inline svg fallback to avoid external placeholder DNS issues
-  <svg viewBox="0 0 600 400" className="w-full h-40 object-cover rounded-xl mb-3 border bg-gray-50">
-    <rect width="100%" height="100%" fill="#f8fafc" />
-    <g fill="#d1fae5">
-      <circle cx="80" cy="80" r="60" />
-      <rect x="160" y="40" rx="12" ry="12" width="360" height="220" />
+/* ---------- fallback "No image" SVG (data URI) ---------- */
+const FALLBACK_IMG = "data:image/svg+xml;utf8," + encodeURIComponent(
+  `<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='800' viewBox='0 0 1200 800'>
+    <rect width='100%' height='100%' fill='#f3f4f6'/>
+    <g fill='#9ca3af' font-family='Arial, Helvetica, sans-serif' font-size='34'>
+      <text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle'>No image</text>
     </g>
-  </svg>
+  </svg>`
 );
 
-export default function RecyclerRequests() {
-  const [posts, setPosts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [busyId, setBusyId] = useState(null); // currently processing accept/reject
+function Toast({ msg, type = "info", onClose }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 8 }}
+      className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg shadow-lg text-sm
+        ${type === "success" ? "bg-emerald-600 text-white" : ""}
+        ${type === "error" ? "bg-rose-600 text-white" : ""}
+        ${type === "info" ? "bg-gray-800 text-white" : ""}`}
+      role="alert"
+    >
+      <span>{msg}</span>
+      <button onClick={onClose} className="opacity-80 ml-2">✕</button>
+    </motion.div>
+  );
+}
 
-  const fetchRequests = async () => {
-    setLoading(true);
-    try {
-      const res = await recyclerAPI.getRecyclerRequests();
-      // your service returns response.data?.data or array; ensure we have array of items
-      const items = Array.isArray(res) ? res : (res?.data ?? (res?.data === undefined && res) ? res : []);
-      // If your authService already returns data array (response.data.data) then res is array.
-      // Normalize shape to prefer object fields like postId, sentAt etc.
-      setPosts(items);
-    } catch (err) {
-      console.error("Error fetching requests", err);
-      setPosts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+const cardVariant = {
+  hidden: { opacity: 0, y: 34, scale: 0.95 },
+  visible: i => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { delay: i * 0.045, type: "spring", stiffness: 105, damping: 17 }
+  })
+};
+
+export default function RecyclerRequests() {
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState({ open: false, request: null });
+  const [modalIndex, setModalIndex] = useState(0);
+  const [actionStatus, setActionStatus] = useState("");
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
+    let mounted = true;
+    async function fetchRequests() {
+      setLoading(true);
+      try {
+        const data = await recyclerAPI.getRecyclerRequests();
+        if (!mounted) return;
+        setRequests(Array.isArray(data) ? data : []);
+      } catch (err) {
+        setRequests([]);
+        setToast({ msg: "Failed to load requests", type: "error" });
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
     fetchRequests();
-    // optionally you can poll every n seconds: uncomment below
-    // const id = setInterval(fetchRequests, 20000);
-    // return () => clearInterval(id);
+    return () => { mounted = false; };
   }, []);
 
-  const handleAccept = async (item) => {
-    // item may have requestId / _id or only postId
-    const requestId = item._id || item.requestId || item.requestIdString;
-    const postId = item.postId || item._id;
-
+  const openModalFor = (r) => {
+    setModal({ open: true, request: r });
+    setModalIndex(0);
+  };
+  const closeModal = () => {
+    setModal({ open: false, request: null });
+    setModalIndex(0);
+  };
+  const nextProduct = () => {
+    const len = modal.request?.products?.length || 0;
+    setModalIndex(i => Math.min(i + 1, Math.max(0, len - 1)));
+  };
+  const prevProduct = () => setModalIndex(i => Math.max(i - 1, 0));
+  const handleAction = async (requestId, action) => {
+    if (!requestId) return;
+    setActionStatus("loading");
     try {
-      setBusyId(requestId || postId);
-      if (requestId) {
-        // Preferred: update specific request
-        await recyclerAPI.updateRequestStatus(requestId, "accept");
-        alert("Request accepted (request API).");
-      } else if (postId) {
-        // Fallback: update the post status to negotiation (best-effort)
-        console.warn("request._id missing in API response. Falling back to updating post status (negotiation).");
-        await postAPI.updatePostStatus(postId, "negotiation");
-        alert("Request accepted (fallback: post status updated).");
-      } else {
-        throw new Error("No requestId or postId available to accept.");
-      }
-
-      // Refresh list
-      await fetchRequests();
+      await recyclerAPI.updateRequestStatus(requestId, action);
+      setRequests(prev => prev.filter(r => (r.requestId ?? r.postId) !== requestId));
+      setActionStatus("success");
+      setToast({ msg: `Request ${action}ed`, type: "success" });
+      closeModal();
     } catch (err) {
-      console.error("Accept failed:", err);
-      alert(err.message || "Failed to accept request");
+      setActionStatus("error");
+      setToast({ msg: `Failed to ${action} request`, type: "error" });
     } finally {
-      setBusyId(null);
+      setTimeout(() => setActionStatus(""), 900);
     }
   };
-
-  const handleReject = async (item) => {
-    const requestId = item._id || item.requestId || item.requestIdString;
-    const postId = item.postId || item._id;
-
-    try {
-      setBusyId(requestId || postId);
-      if (requestId) {
-        await recyclerAPI.updateRequestStatus(requestId, "reject");
-        alert("Request rejected (request API).");
-      } else if (postId) {
-        console.warn("request._id missing in API response. Falling back to updating post status (set to pending).");
-        // fallback: set post back to pending/waitingRecycler -> choose 'pending' so it's not considered accepted
-        await postAPI.updatePostStatus(postId, "pending");
-        alert("Request rejected (fallback: post status updated).");
-      } else {
-        throw new Error("No requestId or postId available to reject.");
-      }
-
-      // Refresh list
-      await fetchRequests();
-    } catch (err) {
-      console.error("Reject failed:", err);
-      alert(err.message || "Failed to reject request");
-    } finally {
-      setBusyId(null);
-    }
+  const formattedDate = (d) => {
+    try { return new Date(d).toLocaleString(); } catch { return d; }
   };
-
-  if (loading) {
-    return (
-      <motion.div className="flex flex-col items-center py-24">
-        <Loader2 className="h-10 w-10 animate-spin text-emerald-600 mb-4" />
-        <motion.p initial={{ x: 12, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.15 }} className="text-lg font-semibold text-emerald-600">
-          Loading requests...
-        </motion.p>
-      </motion.div>
-    );
-  }
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="px-4 py-6 sm:p-6">
-      <motion.h2 className="text-3xl font-extrabold mb-6 text-emerald-700 text-center">
-        🚚 Pickup Requests
-      </motion.h2>
-
-      {(!posts || posts.length === 0) ? (
-        <div className="mx-auto text-center py-12 max-w-xl bg-white rounded-3xl shadow-xl border">
-          <p className="text-gray-500 text-xl font-medium">No requests available right now.</p>
-          <p className="text-sm text-gray-400 mt-2">Requests will appear here when users send them.</p>
-        </div>
-      ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="px-2 sm:px-4 lg:px-6 py-6 min-h-screen bg-gradient-to-br from-green-50 to-sky-50"
+      style={{ paddingBottom: 104 }}
+    >
+      <div className="max-w-6xl mx-auto">
+        <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-emerald-800 mb-6 text-center select-none">
+          <span className="inline-block bg-gradient-to-l from-emerald-400 via-green-500 to-blue-500 bg-clip-text text-transparent animate-gradient-x">
+            🚚 Incoming Pickup Requests
+          </span>
+        </h2>
+        {/* Toast notification (top right, mobile bottom-center) */}
+        <div className="fixed z-50 top-6 right-6 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 sm:top-auto sm:bottom-6">
           <AnimatePresence>
-            {posts.map((post, i) => {
-              const uniqueKey = post._id || post.postId || `post-${i}`;
-              const product = Array.isArray(post.products) ? post.products[0] : (post.product || {});
-              const images = product?.images ?? []; // may be undefined
-              const aiPrice = product?.aiSuggestedPrice ?? "-";
-              const aiScore = product?.aiConditionScore ?? "-";
-              const aiConfidence = product?.aiConfidence ?? "-";
-
-              return (
-                <motion.article
-                  key={uniqueKey}
-                  layout
-                  custom={i}
-                  variants={cardVariant}
-                  initial="hidden"
-                  animate="visible"
-                  exit={{ opacity: 0, scale: 0.97 }}
-                  className="relative bg-white rounded-3xl shadow-lg border-2 border-emerald-50 overflow-hidden flex flex-col p-4"
-                >
-                  {/* header */}
-                  <div className="flex items-start gap-3 mb-2">
-                    <div className="inline-flex items-center justify-center rounded-lg bg-emerald-50 p-2">
-                      <Smartphone size={20} className="text-emerald-700" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-emerald-800 truncate">
-                        {product?.brand || "Unknown Brand"} {product?.model ? `— ${product.model}` : ""}
-                      </h3>
-                      <div className="text-sm text-gray-500 truncate">{post.postStatus ? `Status: ${post.postStatus}` : ""}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-xs text-gray-500">Sent</div>
-                      <div className="text-sm font-medium">{safeDate(post.sentAt || post.createdAt)}</div>
-                    </div>
-                  </div>
-
-                  {/* image area */}
-                  <div className="flex-shrink-0 mb-3">
-                    {images && images.length > 0 ? (
-                      <img src={images[0]} alt="product" className="w-full h-40 object-cover rounded-xl border" onError={(e)=>{ e.currentTarget.onerror=null; e.currentTarget.src=''; }} />
-                    ) : (
-                      <FallbackImage />
-                    )}
-                  </div>
-
-                  {/* details */}
-                  <div className="flex-1 space-y-2 text-gray-700 pb-3">
-                    <div className="flex justify-between">
-                      <span className="font-semibold">AI Price</span>
-                      <span className="font-semibold text-emerald-600">₹{aiPrice}</span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span className="font-semibold">Condition Score</span>
-                      <span className="inline-block px-2 py-[2px] rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 text-xs">{aiScore} / 100</span>
-                    </div>
-
-                    <div className="flex justify-between">
-                      <span className="font-semibold">AI Confidence</span>
-                      <span className="text-sm text-gray-600">{aiConfidence}%</span>
-                    </div>
-
-                    <div className="pt-2">
-                      <div className="text-sm font-semibold mb-1">Condition Details</div>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        {product?.conditionDetails && typeof product.conditionDetails === "object" && Object.keys(product.conditionDetails).length > 0 ? (
-                          Object.entries(product.conditionDetails).map(([k, v]) => (
-                            <div key={k} className="bg-gray-50 rounded p-2 border">
-                              <div className="text-xs text-gray-500">{k}</div>
-                              <div className="font-medium text-sm">{String(v)}</div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-xs text-gray-400">No detailed condition provided.</div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 text-sm text-gray-500 pt-2">
-                      <MapPin size={14} className="text-purple-500" />
-                      <div className="truncate">{post.userAddress || "Pickup address not set"}</div>
-                    </div>
-                  </div>
-
-                  {/* actions */}
-                  <div className="mt-3 pt-2 flex gap-2">
-                    <motion.button
-                      whileTap={{ scale: 0.98 }}
-                      disabled={busyId === uniqueKey}
-                      onClick={() => handleAccept({ ...post, _id: post.requestId || post._id || post.postId })}
-                      className="flex-1 bg-gradient-to-r from-emerald-500 to-green-500 text-white py-2 rounded-lg font-semibold shadow"
-                    >
-                      {busyId === uniqueKey ? "Processing..." : "Accept"}
-                    </motion.button>
-
-                    <motion.button
-                      whileTap={{ scale: 0.98 }}
-                      disabled={busyId === uniqueKey}
-                      onClick={() => handleReject({ ...post, _id: post.requestId || post._id || post.postId })}
-                      className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-2 rounded-lg font-semibold shadow"
-                    >
-                      {busyId === uniqueKey ? "Processing..." : "Reject"}
-                    </motion.button>
-                  </div>
-                </motion.article>
-              );
-            })}
+            {toast && (
+              <motion.div key="toast" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+                <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />
+              </motion.div>
+            )}
           </AnimatePresence>
         </div>
-      )}
+        {/* loading */}
+        {loading ? (
+          <div className="flex flex-col items-center py-32">
+            <Loader2 className="h-12 w-12 animate-spin text-emerald-600" />
+            <p className="mt-6 text-lg text-emerald-700 font-bold">Loading requests...</p>
+          </div>
+        ) : requests.length === 0 ? (
+          <motion.div
+            layout
+            className="mx-auto text-center py-24 max-w-2xl bg-white rounded-2xl shadow-xl border flex flex-col items-center gap-2"
+            initial={{ opacity: 0, scale: 0.97 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <ListOrdered className="h-16 w-16 text-gray-300 mb-2" />
+            <p className="text-gray-500 text-2xl font-medium">No requests right now</p>
+            <p className="text-sm text-gray-400">You’ll see requests here when users send them.</p>
+          </motion.div>
+        ) : (
+          <motion.div
+            layout
+            className="grid gap-8 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3 mt-6"
+          >
+            <AnimatePresence>
+              {requests.map((r, idx) => {
+                const key = r.requestId ?? r.postId ?? `req_${idx}`;
+                const p0 = r.products?.[0] || {};
+                return (
+                  <motion.div
+                    key={key}
+                    layout
+                    custom={idx}
+                    variants={cardVariant}
+                    initial="hidden"
+                    animate="visible"
+                    exit={{ opacity: 0, scale: 0.98, y: 20 }}
+                    transition={{ type: "spring" }}
+                    className="relative rounded-3xl bg-white border-2 border-emerald-100 shadow-lg overflow-hidden cursor-pointer hover:shadow-2xl transition hover:-translate-y-2 flex flex-col"
+                    onClick={() => openModalFor(r)}
+                    whileHover={{ scale: 1.025, borderColor: "#34d399" }}
+                  >
+                    {/* card header */}
+                    <motion.div
+                      className="flex items-center gap-4 px-5 py-4 bg-emerald-50/60 border-b"
+                      initial={false}
+                      whileHover={{ background: "linear-gradient(90deg, #a7f3d0 0%, #f0fdfa 100%)" }}
+                      transition={{ type: "spring", duration: 0.15 }}
+                    >
+                      <div className="w-14 h-14 rounded-full border overflow-hidden flex items-center justify-center bg-white">
+                        <img
+                          src={r.user?.avatar || FALLBACK_IMG}
+                          alt={r.user?.fullName || "User"}
+                          onError={e => (e.currentTarget.src = FALLBACK_IMG)}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <div className="font-semibold text-emerald-900">{r.user?.fullName || "User"}</div>
+                        <div className="text-sm text-gray-500">{r.user?.city || r.user?.address || "Unknown location"}</div>
+                      </div>
+                      <div className="ml-auto text-right">
+                        <div className="text-xs text-gray-400">{formattedDate(r.sentAt ?? r.createdAt)}</div>
+                        <div className="mt-2 inline-flex items-center gap-2 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-100">
+                          {r.products?.length ?? 0} item{(r.products?.length ?? 0) > 1 ? "s" : ""}
+                        </div>
+                      </div>
+                    </motion.div>
+                    {/* body */}
+                    <div className="p-6 flex gap-6 flex-col sm:flex-row">
+                      <div className="w-full sm:w-36 h-28 rounded-lg overflow-hidden bg-gray-100 border flex items-center justify-center flex-shrink-0">
+                        <img
+                          src={p0.images?.[0] || FALLBACK_IMG}
+                          alt={p0.brand || p0.wasteType || "product"}
+                          onError={e => (e.currentTarget.src = FALLBACK_IMG)}
+                          className="w-full h-full object-cover transition-transform duration-300"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <div className="text-lg font-bold text-emerald-800 truncate">{p0.brand || p0.wasteType || "Product"}</div>
+                          <div className="text-sm text-gray-600">{p0.model || ""}</div>
+                          <div className="ml-auto text-sm text-gray-500">AI: <span className="font-semibold text-emerald-700">{p0.aiConditionScore ?? "N/A"}</span></div>
+                        </div>
+                        <div className="mt-2 text-sm text-gray-600 truncate">
+                          <MapPin size={14} className="inline-block mr-1 text-purple-500" />{r.userAddress}
+                        </div>
+                        {r.products?.length > 1 && (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {r.products.map((p, i) => (
+                              <div key={`${key}_prod_${i}`} className="px-3 py-1 rounded-full bg-gray-50 border text-sm text-gray-700">
+                                {p.brand || p.wasteType} <span className="text-xs text-gray-400">×{p.quantity ?? 1}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div className="mt-4 flex items-center gap-3">
+                          <ArrowRightCircle className="text-emerald-500" />
+                          <div className="text-sm text-emerald-700 font-semibold">Tap to view full request</div>
+                        </div>
+                      </div>
+                    </div>
+                    {/* footer actions -- always inside border, fully responsive */}
+                    <motion.div
+                      className="w-full px-5 pb-4 pt-2 flex flex-col sm:flex-row items-stretch gap-2 sm:gap-4 border-t bg-gradient-to-br from-emerald-50 via-white to-emerald-50"
+                      style={{ paddingTop: 10 }}
+                      initial={false}
+                      whileHover={{ backgroundColor: "#f0fdfa" }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      <div className="text-[0.94rem] text-gray-500 flex items-center justify-between flex-1 sm:flex-initial">
+                        <span>
+                          Status:
+                          <span className="font-bold text-emerald-700 ml-2">{r.postStatus ?? r.requestStatus ?? "pending"}</span>
+                        </span>
+                      </div>
+                      <div className="flex flex-row gap-2 flex-shrink-0 flex-wrap sm:flex-nowrap justify-end items-center">
+                        <motion.button
+                          whileHover={{ scale: 1.06 }}
+                          whileTap={{ scale: 0.94 }}
+                          tabIndex={0}
+                          onClick={e => { e.stopPropagation(); handleAction(r.requestId ?? r.postId, "accept"); }}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow font-semibold hover:from-green-600 transition-all"
+                        >
+                          <Check size={16} /> Accept
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.06 }}
+                          whileTap={{ scale: 0.94 }}
+                          tabIndex={0}
+                          onClick={e => { e.stopPropagation(); handleAction(r.requestId ?? r.postId, "reject"); }}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-rose-500 to-red-500 text-white shadow font-semibold hover:from-red-700 transition-all"
+                        >
+                          <Trash2 size={16} /> Reject
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </div>
+      {/* ------- Modal for full request details ------ */}
+      <AnimatePresence>
+        {modal.open && modal.request && (
+          <motion.div
+            key="modal-root"
+            className="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ background: "rgba(0,0,0,0.57)" }}
+          >
+            <motion.div
+              className="bg-white w-full max-w-4xl rounded-2xl p-6 md:p-8 shadow-2xl border-2 flex flex-col"
+              initial={{ scale: 0.97, y: 18 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 28 }}
+            >
+              <div className="flex items-start gap-4 mb-4">
+                <div className="w-14 h-14 rounded-full overflow-hidden border bg-white flex-shrink-0">
+                  <img src={modal.request.user?.avatar || FALLBACK_IMG} onError={e => (e.currentTarget.src = FALLBACK_IMG)} alt="user" className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1">
+                  <div className="text-xl font-bold text-emerald-900 pr-4">
+                    {modal.request.user?.fullName || "User"}{" "}
+                    <span className="text-xs text-gray-500">
+                      {formattedDate(modal.request.sentAt ?? modal.request.createdAt)}
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-600 flex items-center gap-2">
+                    <MapPin size={14} className="text-purple-400" />{modal.request.userAddress}
+                  </div>
+                </div>
+                <div className="ml-auto flex items-center gap-1">
+                  <button className="p-2 rounded-lg hover:bg-gray-100" onClick={closeModal}><X /></button>
+                </div>
+              </div>
+              {/* product navigation if multiple */}
+              {modal.request.products?.length > 1 && (
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <button onClick={prevProduct} disabled={modalIndex === 0} className="p-2 rounded-full border-2 disabled:opacity-40"><ArrowLeft /></button>
+                  <div className="text-sm text-gray-600">Product {modalIndex + 1} of {modal.request.products.length}</div>
+                  <button onClick={nextProduct} disabled={modalIndex === (modal.request.products.length - 1)} className="p-2 rounded-full border-2 disabled:opacity-40"><ArrowRight /></button>
+                </div>
+              )}
+              {(() => {
+                const p = modal.request.products?.[modalIndex] ?? {};
+                return (
+                  <motion.div
+                    className="flex flex-col md:flex-row gap-6"
+                    initial={{ x: 44, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    <div className="md:w-80 w-full rounded-lg border overflow-hidden bg-gray-50 flex items-center justify-center">
+                      <img
+                        src={p.images?.[0] || FALLBACK_IMG}
+                        onError={e => (e.currentTarget.src = FALLBACK_IMG)}
+                        alt={p.brand || p.wasteType}
+                        className="w-full h-60 object-cover"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-xs text-blue-600 uppercase font-semibold pb-1">{p.wasteType}</div>
+                      <div className="text-2xl font-bold text-emerald-800">{p.brand} <span className="text-gray-700">{p.model}</span></div>
+                      <div className="text-md mb-2"><span className="font-semibold">AI Price:</span> ₹{p.aiSuggestedPrice ?? "N/A"} <span className="text-sm text-gray-400 ml-2">({p.aiConfidence ?? 0}% conf.)</span></div>
+                      <div className="text-md mb-2"><span className="font-semibold">AI Score:</span> {p.aiConditionScore ?? "N/A"}/100</div>
+                      <div className="text-md mb-3"><span className="font-semibold">Description:</span> {p.description || "—"}</div>
+                      <div className="font-semibold text-gray-800 mb-2">Condition Details</div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                        {p.conditionDetails && Object.keys(p.conditionDetails).length > 0 ? (
+                          Object.entries(p.conditionDetails).map(([k, v]) => (
+                            <div key={k} className="px-3 py-2 rounded-lg bg-gray-50 border text-gray-700">
+                              <div className="text-xs text-gray-500">{k.replace(/([A-Z])/g, " $1")}</div>
+                              <div className="font-medium">{String(v)}</div>
+                            </div>
+                          ))
+                        ) : <div className="text-gray-400">No condition details</div>}
+                      </div>
+                      {p.images?.length > 1 && (
+                        <div className="mt-4 flex gap-3 overflow-x-auto py-2">
+                          {p.images.map((img, i) => (
+                            <button
+                              key={`thumb_${i}`}
+                              className="w-24 h-16 rounded-lg bg-gray-50 border cursor-pointer"
+                              tabIndex={0}
+                              aria-label={`Show image ${i + 1}`}
+                              onClick={() => {
+                                // move clicked img to front in-place
+                                if (i !== 0) {
+                                  const arr = [...(modal.request.products[modalIndex].images || [])];
+                                  const clicked = arr.splice(i, 1)[0];
+                                  arr.unshift(clicked);
+                                  const copy = { ...modal.request };
+                                  copy.products = copy.products.map((prod, pi) => pi === modalIndex ? { ...prod, images: arr } : prod);
+                                  setModal(m => ({ ...m, request: copy }));
+                                }
+                              }}
+                            >
+                              <img src={img || FALLBACK_IMG} onError={e => (e.currentTarget.src = FALLBACK_IMG)} className="w-full h-full object-cover" alt={`img ${i + 1}`} />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })()}
+              {/* Footer actions: always visible */}
+              <motion.div
+                className="mt-8 flex flex-wrap items-center justify-between gap-4"
+                initial={false}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border">
+                    <img src={modal.request.user?.avatar || FALLBACK_IMG} onError={e => (e.currentTarget.src = FALLBACK_IMG)} alt="user" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="text-sm">
+                    <div className="font-semibold">{modal.request.user?.fullName}</div>
+                    <div className="text-gray-500 text-xs">{modal.request.user?.email} · {modal.request.user?.mobile}</div>
+                  </div>
+                </div>
+                <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto justify-end">
+                  <motion.button
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleAction(modal.request.requestId ?? modal.request.postId, "accept")}
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 text-white font-semibold shadow hover:from-green-600"
+                    disabled={actionStatus === "loading"}
+                  >
+                    {actionStatus === "loading" ? <Loader2 className="animate-spin" size={16} /> : <><Check size={16} /> Accept</>}
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleAction(modal.request.requestId ?? modal.request.postId, "reject")}
+                    className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-rose-500 to-red-500 text-white font-semibold shadow hover:from-red-700"
+                    disabled={actionStatus === "loading"}
+                  >
+                    {actionStatus === "loading" ? <Loader2 className="animate-spin" size={16} /> : <><Trash2 size={16} /> Reject</>}
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={closeModal}
+                    className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 font-semibold hover:bg-gray-200"
+                  >Close
+                  </motion.button>
+                </div>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
