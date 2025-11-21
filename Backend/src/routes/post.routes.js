@@ -14,7 +14,8 @@ import {
   getPostById,
   updatePostStatus,
   getRecyclerById,
-  sendRequestToRecycler
+  sendRequestToRecycler,
+  sendMessage
 } from '../controllers/post.controller.js';
 
 const router = Router();
@@ -39,6 +40,9 @@ router.get('/recyclers/:id', getRecyclerById); // public route
 
 // POST /posts/:id/send-request
 router.post('/:id/send-request', verifyJWT, sendRequestToRecycler);
+
+// Send message to recycler
+router.post("/:id/messages", verifyJWT, sendMessage);
 
 // Chat messages (send message / negotiation)
 router.post('/:id/add-message', verifyJWT, addChatMessage);

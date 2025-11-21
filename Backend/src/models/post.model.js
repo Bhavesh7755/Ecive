@@ -171,6 +171,16 @@ const postSchema = new Schema(
       enum: ['pending', 'accepted', 'rejected', 'expired', null],
       default: 'pending'
     },
+
+    messages: [
+      {
+        sender: { type: String, enum: ["user", "recycler"], required: true },
+        text: { type: String, required: true },
+        timestamp: { type: Date, default: Date.now }
+      }
+    ],
+
+
   },
   {
     timestamps: true

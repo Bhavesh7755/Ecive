@@ -1,7 +1,17 @@
 // src/components/dashboard/DashboardLayout.jsx
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Home, Plus, Package, MessageCircle, User, Settings, LogOut, Bell, Search, Menu, X } from 'lucide-react';
+import {
+  Home,
+  Plus,
+  Package,
+  User,
+  LogOut,
+  Bell,
+  Search,
+  Menu,
+  X
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { userAPI } from '../../services/authService';
 
@@ -9,9 +19,7 @@ const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: Home },
   { id: 'sell', label: 'Sell Product', icon: Plus },
   { id: 'orders', label: 'My Posts', icon: Package },
-  { id: 'chats', label: 'Messages', icon: MessageCircle },
   { id: 'profile', label: 'Profile', icon: User },
-  { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
 export default function DashboardLayout({ children, activeTab, onTabChange, user }) {
@@ -29,6 +37,7 @@ export default function DashboardLayout({ children, activeTab, onTabChange, user
 
   return (
     <div className="min-h-screen bg-gray-50">
+
       {/* Mobile Header */}
       <div className="lg:hidden bg-white shadow-sm border-b p-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-green-600">Ecive</h1>
@@ -38,11 +47,11 @@ export default function DashboardLayout({ children, activeTab, onTabChange, user
       </div>
 
       <div className="flex">
+
         {/* Sidebar */}
         <motion.aside
-          className={`${
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          } lg:translate-x-0 fixed lg:static inset-y-0 left-0 w-64 bg-white shadow-lg transform transition-transform duration-200 ease-in-out z-30`}
+          className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            } lg:translate-x-0 fixed lg:static inset-y-0 left-0 w-64 bg-white shadow-lg transform transition-transform duration-200 ease-in-out z-30`}
         >
           <div className="p-6">
             <h1 className="text-2xl font-bold text-green-600 mb-8">Ecive</h1>
@@ -57,12 +66,11 @@ export default function DashboardLayout({ children, activeTab, onTabChange, user
                 />
                 <div>
                   <h3 className="font-semibold text-gray-800">{user?.fullName}</h3>
-                  {/* <p className="text-sm text-gray-600">{user?.email}</p> */}
                 </div>
               </div>
             </div>
 
-            {/* Menu Items */}
+            {/* Sidebar Items */}
             <nav className="space-y-2">
               {menuItems.map((item) => (
                 <motion.button
@@ -70,12 +78,15 @@ export default function DashboardLayout({ children, activeTab, onTabChange, user
                   onClick={() => {
                     onTabChange(item.id);
                     setSidebarOpen(false);
+
+                    // Navigate correctly
+                    if (item.id === "dashboard") navigate("/dashboard");
+                    else navigate(`/dashboard/${item.id}`);
                   }}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-colors ${
-                    activeTab === item.id
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-colors ${activeTab === item.id
                       ? 'bg-green-100 text-green-600 border-r-4 border-green-600'
                       : 'text-gray-600 hover:bg-gray-100'
-                  }`}
+                    }`}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >
@@ -85,7 +96,7 @@ export default function DashboardLayout({ children, activeTab, onTabChange, user
               ))}
             </nav>
 
-            {/* Logout Button */}
+            {/* Logout */}
             <div className="mt-8 pt-8 border-t">
               <button
                 onClick={handleLogout}
@@ -95,24 +106,25 @@ export default function DashboardLayout({ children, activeTab, onTabChange, user
                 <span className="font-medium">Logout</span>
               </button>
             </div>
+
           </div>
         </motion.aside>
 
         {/* Main Content */}
         <main className="flex-1 lg:ml-0">
           <div className="p-6">
+
             {/* Top Bar */}
             <div className="bg-white rounded-xl shadow-sm p-4 mb-6 flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                  <input
-                    type="text"
-                    placeholder="Search your items..."
-                    className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  />
-                </div>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                <input
+                  type="text"
+                  placeholder="Search your items..."
+                  className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500"
+                />
               </div>
+
 
               <div className="flex items-center space-x-4">
                 <motion.button
@@ -127,23 +139,22 @@ export default function DashboardLayout({ children, activeTab, onTabChange, user
                 </motion.button>
 
                 <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                  <span className="text-white font-medium text-sm">{user?.fullName?.charAt(0) || 'U'}</span>
+                  <span className="text-white font-medium text-sm">
+                    {user?.fullName?.charAt(0) || 'U'}
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Dashboard Content */}
-            <div className="space-y-6">{children}</div>
+            {/* ⭐ MAIN FIX: Render DashboardPage routes */}
+            <div className="space-y-6">
+              {children}
+            </div>
+
           </div>
         </main>
       </div>
 
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
     </div>
   );
 }

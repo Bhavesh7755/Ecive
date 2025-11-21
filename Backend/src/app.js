@@ -6,7 +6,7 @@ const app = express();
 
 app.use(cors({
   origin: process.env.CORS_ORIGIN.split(","), // allow frontend
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization"],
 }));

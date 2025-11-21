@@ -39,6 +39,7 @@ const extractErrorMessage = (error) => {
   return 'An error occurred, please try again.';
 };
 
+
 export const userAPI = {
   register: async (formData, avatarFile) => {
     try {
@@ -116,9 +117,9 @@ export const userAPI = {
     }
   },
 
-  changePassword: async (oldPassword, newPassword) => {
+  changePassword: async (currentPassword, newPassword) => {
     try {
-      const response = await api.post('/users/change-password', { oldPassword, newPassword });
+      const response = await api.post('/users/change-password', { currentPassword, newPassword });
       return response.data;
     } catch (error) {
       throw new Error(extractErrorMessage(error));
@@ -147,186 +148,6 @@ export const userAPI = {
     }
   },
 };
-
-// recyclerAPI and postAPI unchanged except ensure they use the same 'api' instance
-// export const recyclerAPI = {
-//   register: async (formData, files) => {
-//     try {
-//       const data = new FormData();
-
-//       // Backend expects these exact field names
-//       data.append('username', (formData.email || '').split('@')[0].toLowerCase());
-//       data.append('fullName', formData.fullName || '');
-//       data.append('email', formData.email || '');
-//       data.append('mobile', formData.mobile || '');
-//       data.append('password', formData.password || '');
-//       data.append('AddressLine1', formData.AddressLine1 || '');
-//       data.append('AddressLine2', formData.AddressLine2 || '');
-//       data.append('city', formData.city || '');
-//       data.append('state', formData.state || '');
-//       data.append('pincode', formData.pincode || '');
-//       data.append('shopName', formData.shopName || '');
-
-//       if (files.avatar) data.append('avatar', files.avatar);
-//       if (files.shopImage) data.append('shopImage', files.shopImage);
-//       if (files.identity) data.append('identity', files.identity);
-
-//       const response = await api.post('/recyclers/register-recycler', data, {
-//         headers: { 'Content-Type': 'multipart/form-data' },
-//       });
-
-//       return response.data;
-//     } catch (error) {
-//       throw new Error(extractErrorMessage(error));
-//     }
-//   },
-
-//   login: async (email, password) => {
-//     try {
-//       const response = await api.post('/recyclers/login', { email, password });
-//       if (response.data?.data) {
-//         const { accessToken, refreshToken, recycler } = response.data.data;
-//         tokenUtils.setTokens(accessToken, refreshToken);
-//         localStorage.setItem('user', JSON.stringify({ ...recycler, role: 'recycler' }));
-//       }
-//       return response.data;
-//     } catch (error) {
-//       throw new Error(extractErrorMessage(error));
-//     }
-//   },
-
-//   logout: async () => {
-//     try {
-//       await api.post('/recyclers/logout');
-//       tokenUtils.clearTokens();
-//     } catch (error) {
-//       throw new Error(extractErrorMessage(error));
-//     }
-//   },
-
-//   refreshToken: async () => {
-//     try {
-//       const response = await api.post('/recyclers/refresh-token');
-//       if (response.data?.data) {
-//         const { accessToken, refreshToken } = response.data.data;
-//         tokenUtils.setTokens(accessToken, refreshToken);
-//       }
-//       return response.data;
-//     } catch (error) {
-//       throw new Error(extractErrorMessage(error));
-//     }
-//   },
-
-//   getMyRequests: async () => {
-//     try {
-//       const response = await api.get('/recyclers/my-requests');
-//       return response.data?.data || [];
-//     } catch (error) {
-//       throw new Error(extractErrorMessage(error));
-//     }
-//   },
-
-//   updateRequestStatus: async (requestId, action, finalPrice = null) => {
-//     try {
-//       const payload = finalPrice ? { finalPrice } : {};
-//       const response = await api.patch(`/recyclers/requests/${requestId}/${action}`, payload);
-//       return response.data;
-//     } catch (error) {
-//       throw new Error(extractErrorMessage(error));
-//     }
-//   },
-
-//   getRecyclerProfile: async () => {
-//     try {
-//       const response = await api.get('/recyclers/profile');
-//       return response.data?.data || response.data;
-//     } catch (error) {
-//       throw new Error(extractErrorMessage(error));
-//     }
-//   },
-
-//   updateRecyclerProfile: async (recyclerData) => {
-//     try {
-//       const response = await api.put('/recyclers/profile', recyclerData);
-//       return response.data;
-//     } catch (error) {
-//       throw new Error(extractErrorMessage(error));
-//     }
-//   },
-
-//   getRecyclerRequests: async () => {
-//     try {
-//       const response = await api.get('/recyclers/requests');
-//       return response.data?.data || [];
-//     } catch (error) {
-//       throw new Error(extractErrorMessage(error));
-//     }
-//   },
-
-//   acceptRecyclerRequest: async (requestId) => {
-//     try {
-//       const response = await api.post(`/recyclers/requests/${requestId}/accept`);
-//       return response.data;
-//     } catch (error) {
-//       throw new Error(extractErrorMessage(error));
-//     }
-//   },
-
-//   rejectRecyclerRequest: async (requestId) => {
-//     try {
-//       const response = await api.post(`/recyclers/requests/${requestId}/reject`);
-//       return response.data;
-//     } catch (error) {
-//       throw new Error(extractErrorMessage(error));
-//     }
-//   },
-
-//   getRecyclerStats: async () => {
-//     try {
-//       const response = await api.get('/recyclers/stats');
-//       return response.data?.data || response.data;
-//     } catch (error) {
-//       throw new Error(extractErrorMessage(error));
-//     }
-//   },
-
-//   getRecyclerNotifications: async () => {
-//     try {
-//       const response = await api.get('/recyclers/notifications');
-//       return response.data?.data || [];
-//     } catch (error) {
-//       throw new Error(extractErrorMessage(error));
-//     }
-//   },
-
-//   markRecyclerNotificationAsRead: async (notificationId) => {
-//     try {
-//       const response = await api.put(`/recyclers/notifications/${notificationId}/read`);
-//       return response.data;
-//     } catch (error) {
-//       throw new Error(extractErrorMessage(error));
-//     }
-//   },
-
-//   getRecyclerEarnings: async () => {
-//     try {
-//       const response = await api.get('/recyclers/earnings');
-//       return response.data?.data || response.data;
-//     } catch (error) {
-//       throw new Error(extractErrorMessage(error));
-//     }
-//   },
-
-//   getRecyclerOrders: async (status = "all") => {
-//     try {
-//       const response = await api.get(`/recyclers/orders?status=${status}`);
-//       return response.data?.data || response.data;
-//     } catch (error) {
-//       throw new Error(extractErrorMessage(error));
-//     }
-//   },
-// };
-
 
 
 
@@ -505,14 +326,17 @@ export const postAPI = {
     }
   },
   // Get posts by logged in user
+  // ✅ CORRECTED getMyPosts
   getMyPosts: async () => {
     try {
-      const response = await api.get('/posts/my-Posts');
-      return response.data;
+      const response = await api.get('/posts/my-posts'); // match backend route
+      // Backend returns: { statusCode, data, message, success }
+      return response.data?.data || [];
     } catch (error) {
       throw new Error(extractErrorMessage(error));
     }
   },
+
 
 
   // Get nearby recyclers by lat, lng and radiusKm
@@ -592,15 +416,29 @@ export const postAPI = {
     }
   },
 
-  // Get post details by ID
-  getPostDetails: async (postId) => {
+  // GET post details
+  getPostDetails: async (id) => {
     try {
-      const response = await api.get(`/posts/${postId}`);
-      return response.data;
+      const response = await api.get(`/posts/${id}`);
+
+      // backend: { statusCode, data, message, success }
+      return response.data.data;  // return ONLY post object
     } catch (error) {
       throw new Error(extractErrorMessage(error));
     }
   },
+
+
+  // SEND message
+  sendMessage: async (id, text) => {
+    try {
+      const response = await api.post(`/posts/${id}/messages`, { text });
+      return response.data?.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
 
   // Update post status
   updatePostStatus: async (postId, status) => {
@@ -611,4 +449,5 @@ export const postAPI = {
       throw new Error(extractErrorMessage(error));
     }
   },
+
 };

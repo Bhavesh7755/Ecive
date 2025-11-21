@@ -5,6 +5,7 @@ import DashboardLayout from '../components/dashboard/DashboardLayout';
 import DashboardHome from '../components/dashboard/DashboardHome';
 import SellProduct from '../components/dashboard/SellProduct';
 import MyPosts from '../components/dashboard/MyPosts';
+import PostDetails from '../components/dashboard/PostDetails';
 import UserProfile from '../components/dashboard/UserProfile';
 import Settings from '../components/dashboard/Settings';
 import { userAPI } from '../services/authService';
@@ -83,6 +84,7 @@ export default function DashboardPage() {
           }
         />
         <Route path="orders" element={<MyPosts user={user} />} />
+        <Route path="post/:id" element={<PostDetails />} />
         <Route path="profile" element={<UserProfile user={user} />} />
         <Route path="settings" element={<Settings />} />
         <Route path="recycler-list" element={<RecyclerList />} />

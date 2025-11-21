@@ -298,7 +298,41 @@ export const sendRequestToRecycler = asyncHandler(async (req, res) => {
     message: 'Request sent to recycler successfully',
     data: { postId, recyclerId, products }
   });
+}); 
+
+
+/* ---------------------- ADD MESSAGE TO POST ---------------------- */
+export const sendMessage = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user?._id;
+  const { text } = req.body;
+
+  if (!text || text.trim() === "") {
+    throw new ApiError(400, "Message cannot be empty");
+  }
+
+  const post = await Post.findById(id);
+  if (!post) throw new ApiError(404, "Post not found");
+
+  let senderRole = "";
+  if (post.user.toString() === userId.toString()) senderRole = "user";
+  else if (post.recycler && post.recycler.toString() === userId.toString())
+    senderRole = "recycler";
+  else throw new ApiError(403, "Not authorized to send message");
+
+  post.messages.push({
+    sender: senderRole,
+    text,
+    timestamp: new Date(),
+  });
+
+  await post.save();
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, post.messages, "Message added"));
 });
+
 
 
 /* ---------------------- CHAT MESSAGE ---------------------- */
