@@ -92,6 +92,7 @@ export default function RecyclerRequests() {
     setModalIndex(i => Math.min(i + 1, Math.max(0, len - 1)));
   };
   const prevProduct = () => setModalIndex(i => Math.max(i - 1, 0));
+  
   const handleAction = async (requestId, action) => {
     if (!requestId) return;
     setActionStatus("loading");
@@ -103,7 +104,7 @@ export default function RecyclerRequests() {
       closeModal();
     } catch (err) {
       setActionStatus("error");
-      setToast({ msg: `Failed to ${action} request`, type: "error" });
+      setToast({ msg: `Failed to ${action} request`, type: "error" }); 
     } finally {
       setTimeout(() => setActionStatus(""), 900);
     }
@@ -237,10 +238,10 @@ export default function RecyclerRequests() {
                     </div>
                     {/* footer actions -- always inside border, fully responsive */}
                     <motion.div
-                      className="w-full px-5 pb-4 pt-2 flex flex-col sm:flex-row items-stretch gap-2 sm:gap-4 border-t bg-gradient-to-br from-emerald-50 via-white to-emerald-50"
+                      className="w-full px-5 pb-4 pt-2 flex flex-col m-auto sm:flex-row items-stretch gap-2 sm:gap-4 border-t bg-gradient-to-br from-emerald-50 via-white to-emerald-50"
                       style={{ paddingTop: 10 }}
                       initial={false}
-                      whileHover={{ backgroundColor: "#f0fdfa" }}
+                      whileHover={{ backgroundColor: "#f8fffdff" }}
                       transition={{ duration: 0.15 }}
                     >
                       <div className="text-[0.94rem] text-gray-500 flex items-center justify-between flex-1 sm:flex-initial">
@@ -249,12 +250,12 @@ export default function RecyclerRequests() {
                           <span className="font-bold text-emerald-700 ml-2">{r.postStatus ?? r.requestStatus ?? "pending"}</span>
                         </span>
                       </div>
-                      <div className="flex flex-row gap-2 flex-shrink-0 flex-wrap sm:flex-nowrap justify-end items-center">
+                      <div className="flex flex-col gap-2 flex-shrink-0 flex-wrap sm:flex-nowrap justify-end items-center">
                         <motion.button
                           whileHover={{ scale: 1.06 }}
                           whileTap={{ scale: 0.94 }}
                           tabIndex={0}
-                          onClick={e => { e.stopPropagation(); handleAction(r.requestId ?? r.postId, "accept"); }}
+                          onClick={e => { e.stopPropagation(); handleAction(r.requestId , "accept"); }}
                           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-green-500 text-white shadow font-semibold hover:from-green-600 transition-all"
                         >
                           <Check size={16} /> Accept
@@ -263,7 +264,7 @@ export default function RecyclerRequests() {
                           whileHover={{ scale: 1.06 }}
                           whileTap={{ scale: 0.94 }}
                           tabIndex={0}
-                          onClick={e => { e.stopPropagation(); handleAction(r.requestId ?? r.postId, "reject"); }}
+                          onClick={e => { e.stopPropagation(); handleAction(r.requestId , "reject"); }}
                           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-rose-500 to-red-500 text-white shadow font-semibold hover:from-red-700 transition-all"
                         >
                           <Trash2 size={16} /> Reject
@@ -386,7 +387,7 @@ export default function RecyclerRequests() {
               })()}
               {/* Footer actions: always visible */}
               <motion.div
-                className="mt-8 flex flex-wrap items-center justify-between gap-4"
+                className="mt-10 flex flex-wrap items-center justify-between gap-4"
                 initial={false}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -404,7 +405,7 @@ export default function RecyclerRequests() {
                   <motion.button
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => handleAction(modal.request.requestId ?? modal.request.postId, "accept")}
+                    onClick={() => handleAction(modal.request.requestId, "accept")}
                     className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-green-500 text-white font-semibold shadow hover:from-green-600"
                     disabled={actionStatus === "loading"}
                   >
@@ -413,7 +414,7 @@ export default function RecyclerRequests() {
                   <motion.button
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => handleAction(modal.request.requestId ?? modal.request.postId, "reject")}
+                    onClick={() => handleAction(modal.request.requestId , "reject")}
                     className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-rose-500 to-red-500 text-white font-semibold shadow hover:from-red-700"
                     disabled={actionStatus === "loading"}
                   >

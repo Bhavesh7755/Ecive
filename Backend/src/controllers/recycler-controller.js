@@ -13,7 +13,7 @@ const generateAccessAndRefreshToken = async (recyclerId) => {
         const accessToken = recycler.generateAccessToken();
         const refreshToken = recycler.generateRefreshToken();
 
-        // ✅ Save refreshToken in DB
+        //  Save refreshToken in DB
         recycler.refreshToken = refreshToken;
         await recycler.save({ validateBeforeSave: false });
 
@@ -38,12 +38,12 @@ const registerRecycler = asyncHandler(async (req, res) => {
         shopName
     } = req.body;
 
-    // ✅ Check if all fields are present
+    //  Check if all fields are present
     if (!username || !fullName || !email || !mobile || !password || !AddressLine1 || !AddressLine2 || !city || !state || !pincode || !shopName) {
         throw new ApiError(400, "All fields are required");
     }
 
-    // ✅ Check if recycler already exists
+    //  Check if recycler already exists
     const existingRecycler = await Recycler.findOne({
         $or: [{ username: username.toLowerCase() }, { email: email.toLowerCase() }, { mobile }]
     });
@@ -51,25 +51,25 @@ const registerRecycler = asyncHandler(async (req, res) => {
         throw new ApiError(409, "Recycler with this username, email, or mobile already exists");
     }
 
-    // ✅ Upload avatar
+    //  Upload avatar
     const avatarLocalPath = req.files?.avatar?.[0]?.path;
     if (!avatarLocalPath) throw new ApiError(400, "Avatar is required");
     const avatar = await uploadOnCloudinary(avatarLocalPath);
     if (!avatar?.url) throw new ApiError(500, "Avatar upload failed");
 
-    // ✅ Upload shop image
+    //  Upload shop image
     const shopImageLocalPath = req.files?.shopImage?.[0]?.path;
     if (!shopImageLocalPath) throw new ApiError(400, "Shop Image is required");
     const shopImage = await uploadOnCloudinary(shopImageLocalPath);
     if (!shopImage?.url) throw new ApiError(500, "Shop image upload failed");
 
-    // ✅ Upload identity proof
+    //  Upload identity proof
     const identityProofLocalPath = req.files?.identity?.[0]?.path;
     if (!identityProofLocalPath) throw new ApiError(400, "Identity Proof is required");
     const identityProof = await uploadOnCloudinary(identityProofLocalPath);
     if (!identityProof?.url) throw new ApiError(500, "Identity proof upload failed");
 
-    // ✅ Create recycler
+    //  Create recycler
     const recycler = await Recycler.create({
         username: username.toLowerCase(),
         fullName,
@@ -93,20 +93,20 @@ const registerRecycler = asyncHandler(async (req, res) => {
         throw new ApiError(500, "Unable to create recycler account, please try again");
     }
 
-    // ✅ Generate tokens and save refresh token in DB
+    //  Generate tokens and save refresh token in DB
     const { accessToken, refreshToken } = await generateAccessAndRefreshToken(recycler._id);
 
-    // ✅ Remove sensitive fields
+    //  Remove sensitive fields
     const createdRecycler = await Recycler.findById(recycler._id).select("-password -refreshToken");
 
-    // ✅ Cookie options
+    //  Cookie options
     const options = {
         httpOnly: true,
         secure: process.env.NODE_ENV === "development", // only secure in prod
         sameSite: "strict"
     };
 
-    // ✅ Return response with tokens
+    //  Return response with tokens
     return res
         .status(201)
         .cookie("accessToken", accessToken, options)
@@ -129,12 +129,12 @@ const registerRecycler = asyncHandler(async (req, res) => {
 const loginRecycler = asyncHandler(async (req, res) => {
     const { email, username, password } = req.body;
 
-    // ✅ Validation
+    //  Validation
     if ((!email && !username) || !password) {
         throw new ApiError(400, "Email/Username and password are required to login");
     }
 
-    // ✅ Find recycler by email or username
+    //  Find recycler by email or username
     const recycler = await Recycler.findOne({
         $or: [
             { email: email?.toLowerCase() },
@@ -146,26 +146,26 @@ const loginRecycler = asyncHandler(async (req, res) => {
         throw new ApiError(404, "No recycler found with this email or username");
     }
 
-    // ✅ Verify password
+    //  Verify password
     const isPasswordValid = await recycler.isPasswordCorrect(password);
     if (!isPasswordValid) {
         throw new ApiError(401, "Invalid password");
     }
 
-    // ✅ Generate new tokens (refreshToken saved in DB inside this function)
+    //  Generate new tokens (refreshToken saved in DB inside this function)
     const { accessToken, refreshToken } = await generateAccessAndRefreshToken(recycler._id);
 
-    // ✅ Exclude sensitive fields
+    //  Exclude sensitive fields
     const loggedInRecycler = await Recycler.findById(recycler._id).select("-password -refreshToken");
 
-    // ✅ Cookie options
+    //  Cookie options
     const options = {
         httpOnly: true,
         secure: process.env.NODE_ENV === "development", // only true in prod
         sameSite: "strict"
     };
 
-    // ✅ Send response
+    //  Send response
     return res
         .status(200)
         .cookie("accessToken", accessToken, options)
@@ -214,14 +214,14 @@ const logoutRecycler = asyncHandler(async (req, res) => {
 
 // Method for generaing access token from refresh token after expiry of access token each time
 const refreshAccessToken = asyncHandler(async (req, res) => {
-    // 1️⃣ Get the refresh token from cookie or body
+    // 1️ Get the refresh token from cookie or body
     const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken;
 
     if (!incomingRefreshToken) {
         throw new ApiError(401, "No refresh token provided. Please login first.");
     }
 
-    // 2️⃣ Verify the refresh token
+    // 2️ Verify the refresh token
     let decodedToken;
     try {
         decodedToken = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
@@ -230,19 +230,19 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Invalid or expired refresh token");
     }
 
-    // 3️⃣ Find recycler by ID stored in token
+    // 3️ Find recycler by ID stored in token
     const recycler = await Recycler.findById(decodedToken?._id);
 
     if (!recycler) {
         throw new ApiError(401, "Invalid refresh token or recycler does not exist");
     }
 
-    // 4️⃣ Check if refresh token matches the one stored in DB
+    // 4️ Check if refresh token matches the one stored in DB
     if (incomingRefreshToken !== recycler.refreshToken) {
         throw new ApiError(401, "Refresh token is expired or already used");
     }
 
-    // 5️⃣ Generate new access and refresh tokens
+    // 5️ Generate new access and refresh tokens
     try {
         const options = {
             httpOnly: true,
@@ -252,7 +252,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
         const { accessToken, refreshToken } = await generateAccessAndRefreshToken(recycler._id);
 
-        // 6️⃣ Send new tokens in cookies and response
+        // 6️ Send new tokens in cookies and response
         return res
             .status(200)
             .cookie("accessToken", accessToken, options)
@@ -272,7 +272,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
 
 /**
- * ✅ 1. Get all requests sent to this recycler
+ *  1. Get all requests sent to this recycler
  */
 export const getRecyclerRequests = asyncHandler(async (req, res) => {
     const recyclerId = req.recycler._id; // ✔ recycler taken from token
@@ -415,7 +415,7 @@ export const getRecyclerEarnings = asyncHandler(async (req, res) => {
 // ---------------------
 // Orders
 // ---------------------
-// 📌 GET Orders for Recycler with status filtering
+// GET Orders for Recycler with status filtering
 export const getRecyclerOrders = asyncHandler(async (req, res) => {
     const recyclerId = req.recycler?._id;
     const status = req.query.status || "all";
@@ -424,32 +424,31 @@ export const getRecyclerOrders = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Unauthorized");
     }
 
-    const filter = { recycler: recyclerId };
+    // 🔹 Base filter: orders accepted by this recycler
+    const filter = {
+        recycler: recyclerId,
+        status: { $ne: "waitingRecycler" } // ❌ exclude new requests
+    };
 
+    // 🔹 Apply status filter only if not "all"
     if (status !== "all") {
         filter.status = status;
     }
 
     const orders = await Post.find(filter)
-        .populate("user", "fullName email mobile")
+        .populate(
+            "user",
+            "fullName email mobile city state AddressLine1 AddressLine2 pincode avatar"
+        )
         .sort({ createdAt: -1 });
 
-    const formattedOrders = orders.map(o => ({
-        id: o._id,
-        status: o.status,
-        userName: o.user?.fullName,
-        userMobile: o.user?.mobile,
-        productsCount: o.products?.length || 0,
-        finalPrice: o.negotiatedPrice || o.aiSuggestedPrice || 0,
-        collectedAt: o.collectedAt,
-        completedAt: o.completedAt,
-        createdAt: o.createdAt,
-    }));
-
-    return res.status(200).json(
-        new ApiResponse(200, formattedOrders, "Recycler orders fetched successfully")
-    );
+    return res
+        .status(200)
+        .json(
+            new ApiResponse(200, orders, "Recycler orders fetched successfully")
+        );
 });
+
 
 
 // ✅ GET Dashboard Stats for Recycler
@@ -498,6 +497,88 @@ export const getRecyclerDashboardStats = asyncHandler(async (req, res) => {
         new ApiResponse(200, { stats }, "Recycler Dashboard Stats fetched successfully")
     );
 });
+
+// ---------------------
+// Recycler Chat - add message
+// ---------------------
+export const addRecyclerChatMessage = asyncHandler(async (req, res) => {
+    const recyclerId = req.recycler?._id;
+    const postId = req.params.id;
+    const { message, priceOffer } = req.body;
+
+    if (!recyclerId) {
+        throw new ApiError(401, "Unauthorized");
+    }
+
+    if (!message && typeof priceOffer === "undefined") {
+        throw new ApiError(400, "message or priceOffer required");
+    }
+
+    const post = await Post.findById(postId);
+    if (!post) {
+        throw new ApiError(404, "Post not found");
+    }
+
+    // ensure this recycler is actually assigned to this post
+    if (!post.recycler || post.recycler.toString() !== recyclerId.toString()) {
+        throw new ApiError(403, "You are not assigned to this order");
+    }
+
+    post.negotiationHistory.push({
+        sender: "recycler",
+        message,
+        priceOffer,
+        createdAt: new Date(),
+    });
+
+    await post.save();
+
+    return res
+        .status(201)
+        .json(new ApiResponse(201, post, "Message added"));
+});
+
+
+
+export const recyclerFinalizePrice = asyncHandler(async (req, res) => {
+    const recyclerId = req.recycler?._id;
+    const postId = req.params.id;
+    const { finalPrice } = req.body;
+
+    if (!recyclerId) {
+        throw new ApiError(401, "Unauthorized");
+    }
+
+    if (!finalPrice || isNaN(finalPrice)) {
+        throw new ApiError(400, "Valid final price required");
+    }
+
+    const post = await Post.findById(postId);
+    if (!post) throw new ApiError(404, "Post not found");
+
+    if (!post.recycler || post.recycler.toString() !== recyclerId.toString()) {
+        throw new ApiError(403, "Not assigned to this post");
+    }
+
+    post.negotiatedPrice = finalPrice;
+    post.isPriceFinalized = true;
+    post.status = "finalized";
+
+    // Add system message
+    post.negotiationHistory.push({
+        sender: "system",
+        message: `Recycler finalized price at ₹${finalPrice}`,
+        priceOffer: finalPrice,
+        createdAt: new Date(),
+    });
+
+    await post.save();
+
+    return res.status(200).json(
+        new ApiResponse(200, post, "Price finalized successfully")
+    );
+});
+
 
 export {
     registerRecycler,

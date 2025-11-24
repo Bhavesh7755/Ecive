@@ -11,7 +11,7 @@ export default function RecyclerRequestCard({ request, onUpdate }) {
     if (status !== "pending") return; // Only allow action if pending
     setLoading(true);
     try {
-      await recyclerAPI.updateRequestStatus(request.postId, action); // accept or reject
+      await recyclerAPI.updateRequestStatus(request.requestId, action); // accept or reject
       setStatus(action === "accept" ? "accepted" : "rejected");
       if (onUpdate) onUpdate();
     } catch (err) {

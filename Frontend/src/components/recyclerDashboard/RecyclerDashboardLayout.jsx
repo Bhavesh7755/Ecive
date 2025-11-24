@@ -10,7 +10,7 @@ const menuItems = [
   { id: "dashboard", label: "Dashboard", icon: Home },
   { id: "requests", label: "New Requests", icon: Package },
   { id: "earnings", label: "Earnings", icon: Wallet },
-  { id: "notifications", label: "Notifications", icon: Bell },
+  { id: "orders", label: "Orders", icon: Package },
   { id: "profile", label: "Profile", icon: User },
   { id: "settings", label: "Settings", icon: Settings },
 ];

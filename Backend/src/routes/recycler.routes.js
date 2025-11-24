@@ -54,6 +54,8 @@ import {
     getRecyclerEarnings,
     getRecyclerOrders,
     getRecyclerDashboardStats,
+    addRecyclerChatMessage,
+    recyclerFinalizePrice,
 } from "../controllers/recycler-controller.js";
 import { verifyJWTRecycler } from "../middlewares/auth.middleware.js";
 
@@ -69,41 +71,48 @@ router.route("/register-recycler").post(
     registerRecycler
 );
 
-// ✅ Login Recycler
+// Login Recycler
 router.route("/recycler-login").post(loginRecycler);
 
-// ✅ Logout Recycler
+// Logout Recycler
 router.route("/recycler-logout").post(verifyJWTRecycler, logoutRecycler);
 
-// ✅ Refresh Token for Recycler
+// Refresh Token for Recycler
 router.route("/refresh-token-recycler").post(refreshAccessToken);
 
-// ✅ Get Recycler Profile
+// Get Recycler Profile
 router.route("/profile").get(verifyJWTRecycler, getRecyclerProfile);
 
-// ✅ Update Recycler Profile
+// Update Recycler Profile
 router.route("/profile").patch(verifyJWTRecycler, updateRecyclerProfile);
 
-// ✅ Get All Requests from Users
+// Get All Requests from Users
 router.route("/requests").get(verifyJWTRecycler, getRecyclerRequests);
 
-// ✅ Update particular request status (accept / reject)
+// Update particular request status (accept / reject)
 router.route("/requests/:requestId/:action").patch(verifyJWTRecycler, updateRequestStatus);
 
-// ✅ Get notifications for Recycler
+// Get notifications for Recycler
 router.route("/notifications").get(verifyJWTRecycler, getRecyclerNotifications);
 
-// ✅ Mark notification as read
+// Mark notification as read
 router.route("/notifications/:notificationId/read")
       .patch(verifyJWTRecycler, markRecyclerNotificationAsRead);
 
-// ✅ Get recycler earnings
+// Get recycler earnings
 router.route("/earnings").get(verifyJWTRecycler, getRecyclerEarnings);
 
-// ✅ Orders - all | pending | completed | cancelled
+// Orders - all | pending | completed | cancelled
 router.route("/orders").get(verifyJWTRecycler, getRecyclerOrders);
 
-// ✅ Dashboard Stats API (Protected)
+// Dashboard Stats API (Protected)
 router.route("/dashboard-stats").get(verifyJWTRecycler, getRecyclerDashboardStats);
+
+// Recycler chat on an order (same negotiation history)
+router.route("/orders/:id/add-message").post(verifyJWTRecycler, addRecyclerChatMessage);
+
+router.route("/orders/:id/finalize-price").post(verifyJWTRecycler,
+recyclerFinalizePrice);
+
 
 export default router;

@@ -8,7 +8,6 @@ import RecyclerOrders from "../components/recyclerDashboard/RecyclerOrders";
 import RecyclerSettings from "../components/recyclerDashboard/RecyclerSettings";
 import RecyclerEarnings from "../components/recyclerDashboard/RecyclerEarnings";
 import RecyclerRequests from "../components/recyclerDashboard/RecyclerRequests";
-import RecyclerNotifications from "../components/recyclerDashboard/RecyclerNotifications"; // ✅ Fix added!
 
 export default function RecyclerDashboardPage() {
     const [recycler, setRecycler] = useState(null);
@@ -76,12 +75,11 @@ export default function RecyclerDashboardPage() {
     return (
         <RecyclerDashboardLayout recycler={recycler} activeTab={activeTab} onTabChange={handleTabChange}>
             {activeTab === "dashboard" && <RecyclerDashboardHome recycler={recycler} />}
-            {activeTab === "orders" && <RecyclerOrders recycler={recycler} />}
             {activeTab === "profile" && <RecyclerProfile recycler={recycler} />}
             {activeTab === "settings" && <RecyclerSettings recycler={recycler} />}
             {activeTab === "requests" && <RecyclerRequests recycler={recycler} />}
             {activeTab === "earnings" && <RecyclerEarnings recycler={recycler} />}
-            {activeTab === "notifications" && <RecyclerNotifications recycler={recycler} />}
+            {activeTab === "orders" && <RecyclerOrders recycler={recycler} />}
         </RecyclerDashboardLayout>
     );
 }

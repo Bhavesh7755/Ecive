@@ -292,9 +292,45 @@ export const recyclerAPI = {
     }
   },
 
+    getRecyclerOrders: async (status = "all") => {
+    try {
+      const response = await api.get(`/recyclers/orders?status=${status}`);
+      return response.data?.data || [];
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
+  // ✅ Send chat / negotiation message from Recycler side
+  addOrderMessage: async (postId, message, priceOffer = null) => {
+    try {
+      const response = await api.post(
+        `/recyclers/orders/${postId}/add-message`,
+        { message, priceOffer }
+      );
+      // ApiResponse: { statusCode, data: post, message, success }
+      return response.data?.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error));
+    }
+  },
+
   getRecyclerDashboardStats: async () => {
     return api.get("/recycler/dashboard-stats");
   },
+
+
+  finalizeOrderPrice: async (postId, finalPrice) => {
+  try {
+    const response = await api.post(`/recyclers/orders/${postId}/finalize-price`, {
+      finalPrice,
+    });
+    return response.data?.data;
+  } catch (error) {
+    throw new Error(extractErrorMessage(error));
+  }
+},
+
 
 };
 

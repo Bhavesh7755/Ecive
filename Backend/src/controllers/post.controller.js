@@ -301,7 +301,7 @@ export const sendRequestToRecycler = asyncHandler(async (req, res) => {
 }); 
 
 
-/* ---------------------- ADD MESSAGE TO POST ---------------------- */
+/* ADD MESSAGE TO POST */
 export const sendMessage = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const userId = req.user?._id;
